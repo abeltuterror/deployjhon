@@ -575,8 +575,29 @@ function renderConvocatorias() {
 
     grid.innerHTML = pageItems.map((c, i) => {
         const isSaved = state.saved.includes(c.id);
-        const daysLeft = Math.ceil((new Date(c.fechaLimite) - new Date()) / (1000*60*60*24));
-        const urgencyClass = daysLeft <= 3 ? 'bg-red-100 text-red-700' : daysLeft <= 7 ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700';
+
+        // Cálculo correcto con medianoche local
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const limDate = new Date(c.fechaLimite + 'T00:00:00');
+        const diffTime = limDate - today;
+        const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        // Determinar texto y clase de urgencia
+        let urgencyText, urgencyClass;
+        if (daysLeft > 0) {
+            urgencyText = daysLeft + ' días';
+            urgencyClass = daysLeft <= 3 ? 'bg-red-100 text-red-700'      // 1-3 días: rojo
+                          : daysLeft <= 7 ? 'bg-amber-100 text-amber-700'  // 4-7 días: naranja
+                          : 'bg-green-100 text-green-700';                 // más de 7: verde
+        } else if (daysLeft === 0) {
+            urgencyText = 'Hoy';
+            urgencyClass = 'bg-amber-100 text-amber-700';  // hoy: naranja (último día)
+        } else {
+            urgencyText = 'Vencida';
+            urgencyClass = 'bg-red-100 text-red-700';      // vencida: rojo
+        }
+
         const contratoColors = { 'CAS': 'bg-blue-100 text-blue-700', 'D.L. 728': 'bg-purple-100 text-purple-700', 'D.L. 276': 'bg-emerald-100 text-emerald-700' };
         const nivelColors = { 'Técnico': 'bg-orange-100 text-orange-700', 'Universitario': 'bg-cyan-100 text-cyan-700', 'Maestría': 'bg-violet-100 text-violet-700' };
 
@@ -600,7 +621,7 @@ function renderConvocatorias() {
             ${c.experienciaResumen ? `<div class="mb-3 px-3 py-2 bg-blue-50 rounded-lg text-xs text-blue-700 leading-relaxed"><i class="fas fa-briefcase mr-1"></i>${c.experienciaResumen}</div>` : ''}
             ${c.reqPreview.length > 0 ? `<div class="mb-3 space-y-1">${c.reqPreview.map(r => `<div class="req-short text-xs text-gray-500 leading-relaxed"><i class="fas fa-check text-green-400 mr-1 text-[10px]"></i>${r}</div>`).join('')}</div>` : ''}
             <div class="flex items-center justify-between mt-auto pt-3 border-t border-gray-50">
-                <span class="tag ${urgencyClass}"><i class="fas fa-clock mr-1"></i>${daysLeft > 0 ? daysLeft + ' días' : 'Vencida'}</span>
+                <span class="tag ${urgencyClass}"><i class="fas fa-clock mr-1"></i>${urgencyText}</span>
                 <button onclick="openDetail(${c.id})" class="text-sm font-semibold text-peru-red hover:text-peru-dark transition-colors flex items-center gap-1">
                     Ver detalles <i class="fas fa-arrow-right text-xs"></i>
                 </button>

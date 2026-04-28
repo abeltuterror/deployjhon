@@ -417,6 +417,7 @@
 let rawData = [];
 
 fetch('./datos.json')
+
   .then(r => r.json())
   .then(data => {
     rawData = data;
@@ -486,23 +487,23 @@ function normalizeConvocatoria(raw) {
     // ─── NIVEL COMO ARRAY ───
     let nivelArray;
     if (Array.isArray(raw.nivel)) {
-        nivelArray = raw.nivel.map(n => toTitleCase(n));        // ya es array, normalizar cada elemento
+        nivelArray = raw.nivel;                                   // ya es array, no transformar
     } else if (raw.nivel === 'No especificado' || !raw.nivel) {
         nivelArray = [inferNivel(requisitosLimpios, raw.titulo)]; // inferir y envolver en array
     } else {
-        nivelArray = [toTitleCase(raw.nivel)];                   // string simple → array
+        nivelArray = [raw.nivel];                                 // string simple → array
     }
 
     return {
         ...raw,
-        titulo: toTitleCase(raw.titulo),
-        entidad: toTitleCase(raw.entidad),
-        ubicacion: toTitleCase(raw.ubicacion),
-        descripcion: toTitleCase(raw.descripcion),
+        titulo: raw.titulo,
+        entidad: raw.entidad,
+        ubicacion: raw.ubicacion,
+        descripcion: raw.descripcion,
         nivel: nivelArray,                // ← SIEMPRE ES ARRAY
         requisitos: requisitosLimpios,
         reqPreview: requisitosCortos.slice(0, 3),
-        experienciaResumen: experienciaResumen,
+        // experienciaResumen: experienciaResumen,
         funciones: funciones,
         documentos: raw.documentos || generarDocumentos(nivelArray),
         modalidad: raw.modalidad || 'Presencial'
@@ -555,7 +556,7 @@ let state = {
 function populateFilters() {
     const ubicaciones = [...new Set(state.convocatorias.map(c => c.ubicacion))].sort();
     const entidades = [...new Set(state.convocatorias.map(c => c.entidad))].sort();
-    const niveles = [...new Set(state.convocatorias.flatMap(c => c.nivel))].sort();  // ← flatMap
+    const niveles = [...new Set(state.convocatorias.flatMap(c => c.nivel))].filter(n => n !== 'No especificado').sort();  // ← flatMap
     const contratos = [...new Set(state.convocatorias.map(c => c.tipoContrato))].sort();
 
     const selUbi = document.getElementById('f-ubicacion');
@@ -608,11 +609,31 @@ function renderConvocatorias() {
 
     grid.innerHTML = pageItems.map((c, i) => {
         const isSaved = state.saved.includes(c.id);
-        const daysLeft = Math.ceil((new Date(c.fechaLimite) - new Date()) / (1000*60*60*24));
-        const urgencyClass = daysLeft <= 3 ? 'bg-red-100 text-red-700' : daysLeft <= 7 ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700';
+
+        // Cálculo correcto con medianoche local
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const limDate = new Date(c.fechaLimite + 'T00:00:00');
+        const diffTime = limDate - today;
+        const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        // Determinar texto y clase de urgencia
+        let urgencyText, urgencyClass;
+        if (daysLeft > 0) {
+            urgencyText = daysLeft + ' días';
+            urgencyClass = daysLeft <= 3 ? 'bg-red-100 text-red-700'      // 1-3 días: rojo
+                          : daysLeft <= 7 ? 'bg-amber-100 text-amber-700'  // 4-7 días: naranja
+                          : 'bg-green-100 text-green-700';                 // más de 7: verde
+        } else if (daysLeft === 0) {
+            urgencyText = 'Hoy';
+            urgencyClass = 'bg-amber-100 text-amber-700';  // hoy: naranja (último día)
+        } else {
+            urgencyText = 'Vencida';
+            urgencyClass = 'bg-red-100 text-red-700';      // vencida: rojo
+        }
 
         // ─── VARIOS TAGS DE NIVEL ───
-        const nivelTags = c.nivel.map(n =>
+        const nivelTags = c.nivel.filter(n => n !== 'No especificado').map(n =>
             `<span class="tag ${nivelColors[n] || 'bg-gray-100 text-gray-700'}">${n}</span>`
         ).join('');
 
@@ -628,15 +649,10 @@ function renderConvocatorias() {
                 </button>
             </div>
             <h3 class="font-heading font-600 text-base text-gray-900 mb-2 line-clamp-2 leading-snug">${c.titulo}</h3>
-            <div class="space-y-1.5 mb-4 text-sm text-gray-500 flex-1">
-                <div class="flex items-center gap-2"><i class="fas fa-building text-xs text-gray-400 w-4"></i><span class="truncate">${c.entidad}</span></div>
-                <div class="flex items-center gap-2"><i class="fas fa-map-marker-alt text-xs text-gray-400 w-4"></i>${c.ubicacion}</div>
-                <div class="flex items-center gap-2"><i class="fas fa-money-bill-wave text-xs text-gray-400 w-4"></i><span class="font-semibold text-gray-800">S/ ${c.sueldo.toLocaleString()}</span></div>
-            </div>
-            ${c.experienciaResumen ? `<div class="mb-3 px-3 py-2 bg-blue-50 rounded-lg text-xs text-blue-700 leading-relaxed"><i class="fas fa-briefcase mr-1"></i>${c.experienciaResumen}</div>` : ''}
+            <!-- ${c.experienciaResumen ? `<div class="mb-3 px-3 py-2 bg-blue-50 rounded-lg text-xs text-blue-700 leading-relaxed"><i class="fas fa-briefcase mr-1"></i>${c.experienciaResumen}</div>` : ''} -->
             ${c.reqPreview.length > 0 ? `<div class="mb-3 space-y-1">${c.reqPreview.map(r => `<div class="req-short text-xs text-gray-500 leading-relaxed"><i class="fas fa-check text-green-400 mr-1 text-[10px]"></i>${r}</div>`).join('')}</div>` : ''}
             <div class="flex items-center justify-between mt-auto pt-3 border-t border-gray-50">
-                <span class="tag ${urgencyClass}"><i class="fas fa-clock mr-1"></i>${daysLeft > 0 ? daysLeft + ' días' : 'Vencida'}</span>
+                <span class="tag ${urgencyClass}"><i class="fas fa-clock mr-1"></i>${urgencyText}</span>
                 <button onclick="openDetail(${c.id})" class="text-sm font-semibold text-peru-red hover:text-peru-dark transition-colors flex items-center gap-1">
                     Ver detalles <i class="fas fa-arrow-right text-xs"></i>
                 </button>
