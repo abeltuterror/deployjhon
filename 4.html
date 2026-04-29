@@ -243,7 +243,7 @@
             </select>
             <select id="f-salario" onchange="applyFilters()" class="filter-select w-full px-3 py-2.5 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-peru-red/30 text-gray-700">
                 <option value="">Rango salarial</option>
-                <option value="2000">Hasta S/ 2,000</option><option value="3500">Hasta S/ 3,500</option><option value="5000">Hasta S/ 5,000</option><option value="8000">Hasta S/ 8,000</option><option value="99999">Más de S/ 8,000</option>
+                <option value="2000">Hasta S/ 2,000</option><option value="3500">Hasta S/ 3,500</option><option value="5000">Hasta S/ 5,000</option><option value="8000">Hasta S/ 8,000</option><option value="8000+">Más de S/ 8,000</option>
             </select>
             <select id="f-nivel" onchange="applyFilters()" class="filter-select w-full px-3 py-2.5 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-peru-red/30 text-gray-700">
                 <option value="">Nivel</option>
@@ -643,6 +643,7 @@ function renderConvocatorias() {
                 <div class="flex flex-wrap gap-1.5">
                     <span class="tag ${contratoColors[c.tipoContrato] || 'bg-gray-100 text-gray-700'}">${c.tipoContrato}</span>
                     ${nivelTags}
+                    <span class="tag bg-green-100 text-green-700">S/ ${c.sueldo.toLocaleString()}</span>
                 </div>
                 <button onclick="toggleSave(${c.id})" class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-gray-100 transition-colors" aria-label="${isSaved ? 'Quitar de guardados' : 'Guardar convocatoria'}">
                     <i class="fa${isSaved ? 's' : 'r'} fa-bookmark ${isSaved ? 'text-peru-red' : 'text-gray-300'}"></i>
@@ -802,7 +803,15 @@ function applyFilters() {
     if (ubicacion) results = results.filter(c => c.ubicacion === ubicacion);
     if (entidad) results = results.filter(c => c.entidad === entidad);
     if (contrato) results = results.filter(c => c.tipoContrato === contrato);
-    if (salario) results = results.filter(c => c.sueldo <= parseInt(salario));
+    if (salario) {
+        // Si el valor es "8000+", filtra sueldos mayores o iguales a 8000
+        if (salario === '8000+') {
+            results = results.filter(c => c.sueldo >= 8000);
+        } else {
+            // El resto funciona como antes: sueldos <= al número elegido
+            results = results.filter(c => c.sueldo <= parseInt(salario));
+        }
+    }
     if (nivel) results = results.filter(c => c.nivel.includes(nivel));  // ← USA includes EN LUGAR DE ===
     if (fecha) {
         const since = new Date();
@@ -834,7 +843,18 @@ function renderActiveFilters() {
     if (ubicacion) filters.push({ label: ubicacion, clear: () => { document.getElementById('f-ubicacion').value = ''; applyFilters(); } });
     if (entidad) filters.push({ label: entidad, clear: () => { document.getElementById('f-entidad').value = ''; applyFilters(); } });
     if (contrato) filters.push({ label: contrato, clear: () => { document.getElementById('f-contrato').value = ''; applyFilters(); } });
-    if (salario) filters.push({ label: `Hasta S/ ${parseInt(salario).toLocaleString()}`, clear: () => { document.getElementById('f-salario').value = ''; applyFilters(); } });
+    if (salario) {
+        let label;
+        if (salario === '8000+') {
+            label = 'Desde S/ 8,000';
+        } else {
+            label = `Hasta S/ ${parseInt(salario).toLocaleString()}`;
+        }
+        filters.push({
+            label: label,
+            clear: () => { document.getElementById('f-salario').value = ''; applyFilters(); }
+        });
+    }
     if (nivel) filters.push({ label: nivel, clear: () => { document.getElementById('f-nivel').value = ''; applyFilters(); } });
     if (fecha) filters.push({ label: `Últimos ${fecha} días`, clear: () => { document.getElementById('f-fecha').value = ''; applyFilters(); } });
 
