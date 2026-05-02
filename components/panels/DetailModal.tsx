@@ -1,0 +1,292 @@
+'use client'
+import { useEffect, useState } from 'react'
+import { useDetail } from '@/providers/DetailProvider'
+import { getConvocatoriaDetail } from '@/app/actions'
+import type { ConvocatoriaDetail } from '@/types/convocatoria'
+
+const CONTRATO_COLORS: Record<string, string> = {
+  'CAS':      'bg-blue-100 text-blue-700',
+  'D.L. 728': 'bg-purple-100 text-purple-700',
+  'D.L. 276': 'bg-emerald-100 text-emerald-700',
+  '728':      'bg-purple-100 text-purple-700',
+}
+const NIVEL_COLORS: Record<string, string> = {
+  'Técnico':       'bg-orange-100 text-orange-700',
+  'Universitario': 'bg-cyan-100 text-cyan-700',
+  'Maestría':      'bg-violet-100 text-violet-700',
+}
+
+function formatDate(dateStr: string) {
+  return new Date(dateStr + 'T00:00:00').toLocaleDateString('es-PE', {
+    day: '2-digit', month: 'short', year: 'numeric',
+  })
+}
+
+function calcDaysLeft(fechaLimite: string) {
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  return Math.ceil((new Date(fechaLimite + 'T00:00:00').getTime() - today.getTime()) / 86_400_000)
+}
+
+export default function DetailModal() {
+  const { openId, closeDetail } = useDetail()
+  const [data, setData]         = useState<ConvocatoriaDetail | null>(null)
+  const [loading, setLoading]   = useState(false)
+  const [visible, setVisible]   = useState(false)
+  const [panelOpen, setPanelOpen] = useState(false)
+
+  useEffect(() => {
+    if (openId === null) {
+      setPanelOpen(false)
+      const t = setTimeout(() => { setVisible(false); setData(null) }, 400)
+      return () => clearTimeout(t)
+    }
+    setVisible(true)
+    setLoading(true)
+    setData(null)
+    requestAnimationFrame(() => setPanelOpen(true))
+    getConvocatoriaDetail(openId).then(d => {
+      setData(d)
+      setLoading(false)
+    })
+  }, [openId])
+
+  useEffect(() => {
+    if (openId === null) return
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') closeDetail() }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [openId, closeDetail])
+
+  useEffect(() => {
+    document.body.style.overflow = visible ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [visible])
+
+  if (!visible) return null
+
+  return (
+    <div className="fixed inset-0 z-50">
+      <div className="modal-overlay absolute inset-0" onClick={closeDetail} />
+      <div
+        className={`absolute inset-y-0 right-0 w-full max-w-2xl bg-white shadow-2xl overflow-y-auto slide-panel ${panelOpen ? '' : 'closed'}`}
+      >
+        <div className="p-6 sm:p-8">
+          {loading ? (
+            <Skeleton />
+          ) : data ? (
+            <Content data={data} onClose={closeDetail} />
+          ) : (
+            <div className="text-center py-20 text-gray-400">No se encontró la convocatoria.</div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function Skeleton() {
+  return (
+    <div className="animate-pulse space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex gap-2">
+          <div className="h-6 w-16 bg-gray-200 rounded-full" />
+          <div className="h-6 w-24 bg-gray-200 rounded-full" />
+        </div>
+        <div className="h-8 w-8 bg-gray-200 rounded-lg" />
+      </div>
+      <div className="h-8 bg-gray-200 rounded w-3/4" />
+      <div className="grid grid-cols-2 gap-3">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="h-16 bg-gray-100 rounded-xl" />
+        ))}
+      </div>
+      <div className="space-y-2 pt-2">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="h-4 bg-gray-100 rounded" style={{ width: `${70 + (i % 3) * 10}%` }} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function Content({ data: c, onClose }: { data: ConvocatoriaDetail; onClose: () => void }) {
+  const entidad   = c.entidades?.nombre_oficial ?? ''
+  const daysLeft  = calcDaysLeft(c.fecha_limite)
+  const isGeneric = !!(c.funciones?.[0]?.includes('según perfil'))
+
+  const [saved, setSaved] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return (JSON.parse(localStorage.getItem('cp_saved') || '[]') as number[]).includes(c.id)
+  })
+
+  const toggleSave = () => {
+    const stored = JSON.parse(localStorage.getItem('cp_saved') || '[]') as number[]
+    const next   = stored.includes(c.id)
+      ? stored.filter(id => id !== c.id)
+      : [...stored, c.id]
+    localStorage.setItem('cp_saved', JSON.stringify(next))
+    setSaved(next.includes(c.id))
+  }
+
+  return (
+    <>
+      {/* Header: tags + close */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-wrap gap-1.5">
+          <span className={`tag ${CONTRATO_COLORS[c.tipo_contrato] ?? 'bg-gray-100 text-gray-700'} text-sm`}>
+            {c.tipo_contrato}
+          </span>
+          {c.nivel.map(n => (
+            <span key={n} className={`tag ${NIVEL_COLORS[n] ?? 'bg-gray-100 text-gray-700'}`}>{n}</span>
+          ))}
+        </div>
+        <button
+          onClick={onClose}
+          className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+          aria-label="Cerrar detalle"
+        >
+          <i className="fas fa-times text-gray-500" />
+        </button>
+      </div>
+
+      <h2 className="font-heading font-700 text-2xl text-gray-900 mb-4">{c.titulo}</h2>
+
+      {/* Info grid */}
+      <div className="grid grid-cols-2 gap-3 mb-6">
+        <InfoCell label="Entidad"      value={entidad} />
+        <InfoCell label="Ubicación"    value={c.ubicacion} />
+        <InfoCell label="Sueldo"       value={`S/ ${c.sueldo.toLocaleString()}`} />
+        <InfoCell label="Modalidad"    value={c.modalidad} />
+        <InfoCell
+          label="Fecha límite"
+          value={`${formatDate(c.fecha_limite)}${daysLeft > 0 && daysLeft <= 5 ? ` (${daysLeft} días)` : ''}`}
+          className={daysLeft > 0 && daysLeft <= 5 ? 'text-red-600' : 'text-gray-800'}
+        />
+        <InfoCell label="Publicación"  value={formatDate(c.fecha_pub)} />
+      </div>
+
+      {/* Descripción */}
+      {c.descripcion && (
+        <Section icon="fa-align-left" title="Descripción">
+          <p className="text-gray-600 text-sm leading-relaxed">{c.descripcion}</p>
+        </Section>
+      )}
+
+      {/* Requisitos */}
+      {c.requisitos && c.requisitos.length > 0 && (
+        <Section icon="fa-check-circle" title="Requisitos">
+          <ul className="space-y-2">
+            {c.requisitos.map((r, i) => (
+              <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
+                <i className="fas fa-check text-green-500 text-xs mt-1 shrink-0" />
+                <span>{r}</span>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
+      {/* Funciones */}
+      {c.funciones && c.funciones.length > 0 && (
+        <Section icon="fa-tasks" title="Funciones">
+          <ul className="space-y-2">
+            {c.funciones.map((f, i) => (
+              <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
+                <i className="fas fa-arrow-right text-peru-red text-xs mt-1 shrink-0" />
+                <span>{f}</span>
+              </li>
+            ))}
+          </ul>
+          {isGeneric && (
+            <p className="text-xs text-amber-600 mt-2 italic">
+              <i className="fas fa-info-circle mr-1" />
+              Funciones referenciales. Consultar convocatoria oficial para detalle completo.
+            </p>
+          )}
+        </Section>
+      )}
+
+      {/* Documentos */}
+      {c.documentos && c.documentos.length > 0 && (
+        <Section icon="fa-file-alt" title="Documentos necesarios" className="mb-8">
+          <ul className="space-y-2">
+            {c.documentos.map((d, i) => (
+              <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
+                <i className="fas fa-paperclip text-gray-400 text-xs mt-1 shrink-0" />
+                <span>{d}</span>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
+      {/* Sticky actions */}
+      <div className="flex flex-col sm:flex-row gap-3 sticky bottom-0 bg-white pt-4 border-t border-gray-100">
+        <button
+          onClick={toggleSave}
+          className={`flex-1 px-5 py-3 rounded-xl border-2 font-semibold text-sm transition-colors flex items-center justify-center gap-2
+            ${saved
+              ? 'border-peru-red bg-peru-light text-peru-red'
+              : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+        >
+          <i className={`${saved ? 'fas' : 'far'} fa-bookmark`} />
+          {saved ? 'Guardado' : 'Guardar'}
+        </button>
+
+        {c.link_oficial ? (
+          <a
+            href={c.link_oficial}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-1 px-5 py-3 rounded-xl bg-peru-red hover:bg-peru-dark text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2 shadow-lg shadow-peru-red/20"
+          >
+            <i className="fas fa-paper-plane" /> Postular
+          </a>
+        ) : (
+          <button disabled className="flex-1 px-5 py-3 rounded-xl bg-gray-200 text-gray-400 font-semibold text-sm flex items-center justify-center gap-2">
+            <i className="fas fa-paper-plane" /> Sin link disponible
+          </button>
+        )}
+      </div>
+
+      {c.link_oficial && (
+        <a
+          href={c.link_oficial}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block text-center text-sm text-gray-500 hover:text-peru-red mt-3 transition-colors"
+        >
+          <i className="fas fa-external-link-alt mr-1" /> Ver convocatoria oficial
+        </a>
+      )}
+    </>
+  )
+}
+
+function InfoCell({
+  label, value, className = 'text-gray-800',
+}: {
+  label: string; value: string; className?: string
+}) {
+  return (
+    <div className="bg-gray-50 rounded-xl p-3">
+      <div className="text-xs text-gray-500 mb-1">{label}</div>
+      <div className={`text-sm font-semibold ${className}`}>{value}</div>
+    </div>
+  )
+}
+
+function Section({
+  icon, title, children, className = 'mb-6',
+}: {
+  icon: string; title: string; children: React.ReactNode; className?: string
+}) {
+  return (
+    <div className={className}>
+      <h3 className="font-heading font-600 text-lg text-gray-900 mb-3 flex items-center gap-2">
+        <i className={`fas ${icon} text-peru-red text-sm`} /> {title}
+      </h3>
+      {children}
+    </div>
+  )
+}
