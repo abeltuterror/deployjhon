@@ -1,27 +1,8 @@
 'use server'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
+import { createClient } from '@/lib/supabase/server'
 import type { ConvocatoriaDetail } from '@/types/convocatoria'
-
-// ── Supabase client factory ───────────────────────────────────────────────────
-
-async function createClient() {
-  const cookieStore = await cookies()
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => cookieStore.getAll(),
-        setAll: (cs) => cs.forEach(({ name, value, options }) =>
-          cookieStore.set(name, value, options)
-        ),
-      },
-    }
-  )
-}
 
 async function requireAdmin(supabase: Awaited<ReturnType<typeof createClient>>) {
   const { data: { user } } = await supabase.auth.getUser()
@@ -151,7 +132,7 @@ const ConvocatoriaSchema = z.object({
   fecha_pub:     z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Fecha inválida'),
   fecha_limite:  z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Fecha inválida'),
   descripcion:   z.string().optional(),
-  link_oficial:  z.string().url('URL inválida').or(z.literal('')).optional(),
+  link_oficial:  z.string().regex(/^https?:\/\/.+/, 'URL inválida').or(z.literal('')).optional(),
 })
 
 function slugify(text: string, id: number) {
@@ -214,10 +195,8 @@ export async function submitConvocatoria(
     entidadId = created.id
   }
 
-  const id = Date.now()
   const { error: insertErr } = await supabase.from('convocatorias').insert({
-    id,
-    slug: slugify(d.titulo, id),
+    slug: slugify(d.titulo, Date.now()),
     titulo: d.titulo,
     entidad_id: entidadId,
     ubicacion: d.ubicacion,

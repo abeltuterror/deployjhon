@@ -1,7 +1,6 @@
-import { createServerClient } from '@supabase/ssr'
 import { unstable_cache } from 'next/cache'
-import { cookies } from 'next/headers'
 import { Suspense } from 'react'
+import { createClient } from '@/lib/supabase/server'
 import HeroSection from '@/components/sections/HeroSection'
 import Filters from '@/components/sections/Filters'
 import ConvocatoriasGrid from '@/components/sections/ConvocatoriasGrid'
@@ -22,24 +21,6 @@ interface PageProps {
     orden?: string
     pagina?: string
   }>
-}
-
-// ── Auth-aware client (needed for RLS session) ────────────────────────────────
-
-async function createClient() {
-  const cookieStore = await cookies()
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => cookieStore.getAll(),
-        setAll: (cs) => cs.forEach(({ name, value, options }) =>
-          cookieStore.set(name, value, options)
-        ),
-      },
-    }
-  )
 }
 
 // ── Cached filter options ─────────────────────────────────────────────────────

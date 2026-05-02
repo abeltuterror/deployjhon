@@ -1,10 +1,12 @@
 'use client'
 import { useEffect, useState } from 'react'
+import type { User } from '@supabase/supabase-js'
 import { usePanel } from '@/providers/PanelProvider'
 import { useAuth } from '@/providers/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
+import AuthModal from '@/components/auth/AuthModal'
 
-// ── Types ────────────────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 interface GuardadaRow {
   id: number
@@ -37,7 +39,7 @@ interface AlertaRow {
   created_at: string
 }
 
-type Tab = 'guardadas' | 'postulaciones' | 'alertas'
+type Tab = 'guardadas' | 'postulaciones' | 'alertas' | 'cuenta'
 
 // ── Main Component ────────────────────────────────────────────────────────────
 
@@ -45,7 +47,7 @@ export default function UserPanel() {
   const { activePanel, closePanel } = usePanel()
   const { user, loading: authLoading } = useAuth()
 
-  const [visible, setVisible]   = useState(false)
+  const [visible, setVisible]     = useState(false)
   const [panelOpen, setPanelOpen] = useState(false)
 
   useEffect(() => {
@@ -82,9 +84,9 @@ export default function UserPanel() {
           {authLoading ? (
             <PanelSkeleton />
           ) : !user ? (
-            <LoginForm onClose={closePanel} />
+            <AuthModal onClose={closePanel} />
           ) : (
-            <TabsView userId={user.id} email={user.email ?? ''} onClose={closePanel} />
+            <TabsView user={user} onClose={closePanel} />
           )}
         </div>
       </div>
@@ -92,137 +94,25 @@ export default function UserPanel() {
   )
 }
 
-// ── Login Form (PillaPago style) ──────────────────────────────────────────────
-
-function LoginForm({ onClose }: { onClose: () => void }) {
-  const [supabase] = useState(() => createClient())
-  const [email, setEmail]       = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError]       = useState('')
-  const [submitting, setSubmitting] = useState(false)
-
-  const handleEmail = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    setSubmitting(true)
-    const { error: err } = await supabase.auth.signInWithPassword({ email, password })
-    setSubmitting(false)
-    if (err) setError(err.message === 'Invalid login credentials'
-      ? 'Correo o contraseña incorrectos.'
-      : err.message)
-    // On success, AuthProvider detects the session change → panel re-renders to tabs
-  }
-
-  const handleGoogle = async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: window.location.origin + '/auth/callback' },
-    })
-  }
-
-  return (
-    <>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-peru-red rounded-lg flex items-center justify-center">
-            <i className="fas fa-landmark text-white text-xs" />
-          </div>
-          <span className="font-heading font-700 text-gray-900">Convocape</span>
-        </div>
-        <button
-          onClick={onClose}
-          className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
-        >
-          <i className="fas fa-times text-gray-500 text-sm" />
-        </button>
-      </div>
-
-      <h2 className="font-heading font-700 text-2xl text-gray-900 mb-1">Iniciar Sesión</h2>
-      <p className="text-sm text-gray-500 mb-6">Accede a tus convocatorias guardadas y alertas.</p>
-
-      <form onSubmit={handleEmail} className="space-y-4">
-        <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-1.5">Correo electrónico</label>
-          <input
-            type="email" required value={email} onChange={e => setEmail(e.target.value)}
-            placeholder="tu@correo.com"
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-peru-red/30 text-sm"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-1.5">Contraseña</label>
-          <input
-            type="password" required value={password} onChange={e => setPassword(e.target.value)}
-            placeholder="••••••••"
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-peru-red/30 text-sm"
-          />
-        </div>
-
-        {error && (
-          <p className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">
-            <i className="fas fa-exclamation-circle mr-1" />{error}
-          </p>
-        )}
-
-        <button
-          type="submit" disabled={submitting}
-          className="w-full py-3 bg-peru-red hover:bg-peru-dark disabled:opacity-60 text-white font-semibold rounded-xl transition-colors text-sm"
-        >
-          {submitting ? <i className="fas fa-spinner fa-spin" /> : 'Ingresar'}
-        </button>
-      </form>
-
-      <div className="flex items-center gap-3 my-5">
-        <hr className="flex-1 border-gray-200" />
-        <span className="text-xs text-gray-400">o continúa con</span>
-        <hr className="flex-1 border-gray-200" />
-      </div>
-
-      <button
-        onClick={handleGoogle}
-        className="w-full py-3 border border-gray-200 rounded-xl flex items-center justify-center gap-3 hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700"
-      >
-        <svg width="18" height="18" viewBox="0 0 18 18">
-          <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/>
-          <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
-          <path fill="#FBBC05" d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.348 2.825.957 4.039l3.007-2.332z"/>
-          <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z"/>
-        </svg>
-        Continuar con Google
-      </button>
-
-      <p className="text-center text-xs text-gray-500 mt-6">
-        ¿No tienes cuenta?{' '}
-        <a href="/register" className="text-peru-red font-semibold hover:underline">Regístrate</a>
-      </p>
-      <p className="text-center text-xs text-gray-400 mt-2">
-        <a href="/forgot-password" className="hover:underline">¿Olvidaste tu contraseña?</a>
-      </p>
-    </>
-  )
-}
-
 // ── Tabs View ─────────────────────────────────────────────────────────────────
 
-function TabsView({ userId, email, onClose }: { userId: string; email: string; onClose: () => void }) {
+function TabsView({ user, onClose }: { user: User; onClose: () => void }) {
   const { signOut } = useAuth()
   const [supabase] = useState(() => createClient())
   const [tab, setTab] = useState<Tab>('guardadas')
 
-  const [guardadas, setGuardadas]           = useState<GuardadaRow[] | null>(null)
-  const [postulaciones, setPostulaciones]   = useState<PostulacionRow[] | null>(null)
-  const [alertas, setAlertas]               = useState<AlertaRow[] | null>(null)
-  const [loadingData, setLoadingData]       = useState(false)
+  const [guardadas, setGuardadas]         = useState<GuardadaRow[] | null>(null)
+  const [postulaciones, setPostulaciones] = useState<PostulacionRow[] | null>(null)
+  const [alertas, setAlertas]             = useState<AlertaRow[] | null>(null)
+  const [loadingData, setLoadingData]     = useState(false)
 
-  // Lazy-load each tab's data on first visit
   useEffect(() => {
     if (tab === 'guardadas' && guardadas === null) {
       setLoadingData(true)
       supabase
         .from('guardados')
         .select('id, convocatorias(id, titulo, ubicacion, sueldo, fecha_limite, tipo_contrato, entidades(nombre_oficial))')
-        .eq('user_id', userId)
+        .eq('user_id', user.id)
         .then(({ data }) => { setGuardadas((data as unknown as GuardadaRow[]) ?? []); setLoadingData(false) })
     }
     if (tab === 'postulaciones' && postulaciones === null) {
@@ -230,7 +120,7 @@ function TabsView({ userId, email, onClose }: { userId: string; email: string; o
       supabase
         .from('postulaciones')
         .select('id, created_at, convocatorias(id, titulo, ubicacion, fecha_limite, entidades(nombre_oficial))')
-        .eq('user_id', userId)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .then(({ data }) => { setPostulaciones((data as unknown as PostulacionRow[]) ?? []); setLoadingData(false) })
     }
@@ -239,40 +129,41 @@ function TabsView({ userId, email, onClose }: { userId: string; email: string; o
       supabase
         .from('alertas')
         .select('id, texto, created_at')
-        .eq('user_id', userId)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .then(({ data }) => { setAlertas((data as unknown as AlertaRow[]) ?? []); setLoadingData(false) })
     }
-  }, [tab, userId, supabase, guardadas, postulaciones, alertas])
+  }, [tab, user.id, supabase, guardadas, postulaciones, alertas])
 
   const handleSignOut = async () => {
     await signOut()
     onClose()
   }
 
-  const removeGuardada = async (guardadaId: number) => {
-    await supabase.from('guardados').delete().eq('id', guardadaId)
-    setGuardadas(prev => prev?.filter(g => g.id !== guardadaId) ?? [])
+  const removeGuardada = async (id: number) => {
+    await supabase.from('guardados').delete().eq('id', id)
+    setGuardadas(prev => prev?.filter(g => g.id !== id) ?? [])
   }
 
-  const removeAlerta = async (alertaId: number) => {
-    await supabase.from('alertas').delete().eq('id', alertaId)
-    setAlertas(prev => prev?.filter(a => a.id !== alertaId) ?? [])
+  const removeAlerta = async (id: number) => {
+    await supabase.from('alertas').delete().eq('id', id)
+    setAlertas(prev => prev?.filter(a => a.id !== id) ?? [])
   }
 
   const addAlerta = async (texto: string) => {
     const { data } = await supabase
       .from('alertas')
-      .insert({ user_id: userId, texto })
+      .insert({ user_id: user.id, texto })
       .select('id, texto, created_at')
       .single()
     if (data) setAlertas(prev => [data as AlertaRow, ...(prev ?? [])])
   }
 
   const TABS: { key: Tab; label: string; icon: string }[] = [
-    { key: 'guardadas',    label: 'Guardadas',    icon: 'fa-bookmark' },
-    { key: 'postulaciones', label: 'Postulaciones', icon: 'fa-paper-plane' },
-    { key: 'alertas',      label: 'Alertas',      icon: 'fa-bell' },
+    { key: 'guardadas',     label: 'Guardadas',     icon: 'fa-bookmark'     },
+    { key: 'postulaciones', label: 'Postulaciones', icon: 'fa-paper-plane'  },
+    { key: 'alertas',       label: 'Alertas',       icon: 'fa-bell'         },
+    { key: 'cuenta',        label: 'Cuenta',        icon: 'fa-shield-halved'},
   ]
 
   return (
@@ -281,7 +172,7 @@ function TabsView({ userId, email, onClose }: { userId: string; email: string; o
       <div className="flex items-center justify-between mb-6">
         <div>
           <p className="text-xs text-gray-500">Sesión activa</p>
-          <p className="text-sm font-semibold text-gray-800 truncate max-w-[200px]">{email}</p>
+          <p className="text-sm font-semibold text-gray-800 truncate max-w-50">{user.email}</p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -305,18 +196,21 @@ function TabsView({ userId, email, onClose }: { userId: string; email: string; o
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`flex-1 py-3 text-xs font-semibold flex items-center justify-center gap-1.5 border-b-2 transition-colors
+            className={`flex-1 py-3 text-xs font-semibold flex items-center justify-center gap-1 border-b-2 transition-colors
               ${tab === t.key
                 ? 'border-peru-red text-peru-red'
                 : 'border-transparent text-gray-500 hover:text-gray-700'}`}
           >
-            <i className={`fas ${t.icon}`} /> {t.label}
+            <i className={`fas ${t.icon}`} />
+            <span className="hidden sm:inline ml-1">{t.label}</span>
           </button>
         ))}
       </div>
 
       {/* Tab Content */}
-      {loadingData ? (
+      {tab === 'cuenta' ? (
+        <CuentaTab user={user} />
+      ) : loadingData ? (
         <TabSkeleton />
       ) : tab === 'guardadas' ? (
         <GuardadasTab items={guardadas ?? []} onRemove={removeGuardada} />
@@ -326,6 +220,124 @@ function TabsView({ userId, email, onClose }: { userId: string; email: string; o
         <AlertasTab items={alertas ?? []} onRemove={removeAlerta} onAdd={addAlerta} />
       )}
     </>
+  )
+}
+
+// ── Tab: Cuenta (vincular / cambiar contraseña) ───────────────────────────────
+
+function CuentaTab({ user }: { user: User }) {
+  const [supabase]     = useState(() => createClient())
+  const [password, setPassword]   = useState('')
+  const [confirm, setConfirm]     = useState('')
+  const [error, setError]         = useState('')
+  const [success, setSuccess]     = useState(false)
+  const [loading, setLoading]     = useState(false)
+
+  // Si no hay identidad "email", el usuario solo se registró con Google
+  const hasEmailProvider = user.identities?.some(i => i.provider === 'email') ?? false
+  const title = hasEmailProvider ? 'Cambiar contraseña' : 'Vincular contraseña'
+  const subtitle = hasEmailProvider
+    ? 'Actualiza tu contraseña de acceso.'
+    : 'Vincula una contraseña para poder iniciar sesión también con tu correo y contraseña.'
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    setSuccess(false)
+
+    if (password.length < 6) {
+      setError('La contraseña debe tener al menos 6 caracteres.')
+      return
+    }
+    if (password !== confirm) {
+      setError('Las contraseñas no coinciden.')
+      return
+    }
+
+    setLoading(true)
+    const { error: err } = await supabase.auth.updateUser({ password })
+    setLoading(false)
+
+    if (err) { setError(err.message); return }
+
+    setSuccess(true)
+    setPassword('')
+    setConfirm('')
+  }
+
+  return (
+    <div>
+      {/* Info del proveedor */}
+      <div className="bg-gray-50 rounded-xl p-4 mb-6">
+        <p className="text-xs font-semibold text-gray-500 mb-2">Método de inicio de sesión</p>
+        <div className="flex items-center gap-2">
+          {user.identities?.map(identity => (
+            <span
+              key={identity.provider}
+              className="flex items-center gap-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-lg px-3 py-1.5"
+            >
+              {identity.provider === 'google' ? (
+                <svg width="12" height="12" viewBox="0 0 18 18">
+                  <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/>
+                  <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
+                  <path fill="#FBBC05" d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.348 2.825.957 4.039l3.007-2.332z"/>
+                  <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z"/>
+                </svg>
+              ) : (
+                <i className="fas fa-envelope text-gray-400" style={{ fontSize: 10 }} />
+              )}
+              {identity.provider === 'google' ? 'Google' : 'Email'}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Formulario */}
+      <h3 className="text-sm font-semibold text-gray-800 mb-1">{title}</h3>
+      <p className="text-xs text-gray-500 mb-4">{subtitle}</p>
+
+      <form onSubmit={handleSave} className="space-y-3">
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+            {hasEmailProvider ? 'Nueva contraseña' : 'Contraseña'}
+          </label>
+          <input
+            type="password" required value={password} onChange={e => setPassword(e.target.value)}
+            placeholder="Mínimo 6 caracteres"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-peru-red/30 text-sm"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+            Confirmar contraseña
+          </label>
+          <input
+            type="password" required value={confirm} onChange={e => setConfirm(e.target.value)}
+            placeholder="Repite la contraseña"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-peru-red/30 text-sm"
+          />
+        </div>
+
+        {error && (
+          <p className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">
+            <i className="fas fa-exclamation-circle mr-1" />{error}
+          </p>
+        )}
+        {success && (
+          <p className="text-xs text-green-700 bg-green-50 rounded-lg px-3 py-2">
+            <i className="fas fa-check-circle mr-1" />
+            {hasEmailProvider ? 'Contraseña actualizada correctamente.' : 'Contraseña vinculada. Ya puedes iniciar sesión con email y contraseña.'}
+          </p>
+        )}
+
+        <button
+          type="submit" disabled={loading}
+          className="w-full py-3 bg-peru-red hover:bg-peru-dark disabled:opacity-60 text-white font-semibold rounded-xl transition-colors text-sm"
+        >
+          {loading ? <i className="fas fa-spinner fa-spin" /> : title}
+        </button>
+      </form>
+    </div>
   )
 }
 
@@ -406,7 +418,7 @@ function AlertasTab({
   onRemove: (id: number) => void
   onAdd: (texto: string) => Promise<void>
 }) {
-  const [texto, setTexto] = useState('')
+  const [texto, setTexto]   = useState('')
   const [saving, setSaving] = useState(false)
 
   const handleAdd = async (e: React.FormEvent) => {
