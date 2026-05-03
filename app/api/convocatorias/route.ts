@@ -195,11 +195,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Ningún item válido', errors }, { status: 400 })
   }
 
-  // 5. Upsert masivo — deduplica por numero_folio
+  // 5. Upsert masivo — deduplica por slug (constraint UNIQUE completa)
+  // numero_folio usa índice parcial que PostgREST no admite en ON CONFLICT
   const { data, error: upsertError } = await supabase
     .from('convocatorias')
     .upsert(results, {
-      onConflict: 'numero_folio',
+      onConflict: 'slug',
       ignoreDuplicates: false,
     })
     .select('id, titulo')

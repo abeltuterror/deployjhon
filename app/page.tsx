@@ -45,10 +45,10 @@ const getCachedFilterOptions = unstable_cache(
       { count: totalEntidades },
     ] = await Promise.all([
       db.from('convocatorias').select('ubicacion').eq('estado', 'activa'),
-      db.from('entidades').select('nombre_oficial').eq('validada', true).order('nombre_oficial'),
+      db.from('entidades').select('nombre_oficial').order('nombre_oficial'),
       db.from('convocatorias').select('tipo_contrato').eq('estado', 'activa'),
       // head:true → PostgREST sends HEAD request, zero rows transferred
-      db.from('entidades').select('id', { count: 'exact', head: true }).eq('validada', true),
+      db.from('entidades').select('id', { count: 'exact', head: true }),
     ])
     console.timeEnd('[cache] filter-options-build')
 
