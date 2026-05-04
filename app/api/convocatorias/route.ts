@@ -50,7 +50,7 @@ function generateSlug(titulo: string, folio: string): string {
 async function resolveEntity(
   supabase: ReturnType<typeof createAdminClient>,
   entidadNombre: string
-): Promise<string | null> {
+): Promise<number | null> {
   const nombre = entidadNombre.trim()
 
   const { data: exactMatch } = await supabase
@@ -91,7 +91,7 @@ interface DbConvocatoria {
   // id omitido — BIGSERIAL lo genera la BD automáticamente
   titulo: string
   slug: string
-  entidad_id: string | null
+  entidad_id: number | null
   ubicacion: string
   sueldo: number
   fecha_pub: string

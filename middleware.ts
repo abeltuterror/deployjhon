@@ -29,7 +29,14 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
+  // Only run auth check on routes that actually need a valid session.
+  // Skipping public pages (/, /convocatorias/*, etc.) eliminates the
+  // getUser() round-trip to Supabase Auth (~500ms) on every page load.
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/admin/:path*',
+    '/panel/:path*',
+    '/perfil/:path*',
+    '/guardados/:path*',
+    '/auth/callback',
   ],
 }

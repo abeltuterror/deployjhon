@@ -132,8 +132,14 @@ export default async function HomePage({ searchParams }: PageProps) {
   // At this point the entire WHERE + ORDER BY + LIMIT/OFFSET is in PostgreSQL.
   // Node.js receives only ITEMS_PER_PAGE rows (max 12).
   console.time('[step3] db-main-query')
-  const { data: convocatorias, count } = await query
+  const { data: rawConvocatorias, count } = await query
   console.timeEnd('[step3] db-main-query')
+
+  // Safety cap: Supabase should never return more than ITEMS_PER_PAGE rows
+  // (range is applied server-side), but slice defensively in case of unexpected
+  // PostgREST behavior with embedded resources or count=exact.
+  const convocatorias = (rawConvocatorias ?? []).slice(0, ITEMS_PER_PAGE)
+  console.log(`[debug] rows from DB: ${rawConvocatorias?.length ?? 0}, after slice: ${convocatorias.length}`)
 
   // ── Step 4: Post-processing ───────────────────────────────────────────────
   // Only arithmetic — no array iteration over convocatorias.
@@ -172,7 +178,7 @@ export default async function HomePage({ searchParams }: PageProps) {
       <main className="py-10" style={{ background: 'var(--bg)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <ConvocatoriasGrid
-            convocatorias={(convocatorias as unknown as ConvocatoriaListItem[]) ?? []}
+            convocatorias={convocatorias as unknown as ConvocatoriaListItem[]}
             total={count ?? 0}
             page={page}
             itemsPerPage={ITEMS_PER_PAGE}

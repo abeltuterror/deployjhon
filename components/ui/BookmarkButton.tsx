@@ -1,33 +1,46 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useTransition } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { toggleGuardado } from '@/app/actions'
+import { useAuth } from '@/providers/AuthProvider'
 
 interface Props {
   convocatoriaId: number
-  isSaved: boolean
+  isSaved?: boolean
 }
 
-export default function BookmarkButton({ convocatoriaId }: Props) {
-  const [saved, setSaved] = useState(false)
+const supabase = createClient()
+
+export default function BookmarkButton({ convocatoriaId, isSaved = false }: Props) {
+  const { user } = useAuth()
+  const [saved, setSaved] = useState(isSaved)
+  const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
-    const stored = JSON.parse(localStorage.getItem('cp_saved') || '[]') as number[]
-    setSaved(stored.includes(convocatoriaId))
-  }, [convocatoriaId])
+    if (!user) return
+    supabase
+      .from('guardados')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('convocatoria_id', convocatoriaId)
+      .maybeSingle()
+      .then(({ data }) => setSaved(!!data))
+  }, [user, convocatoriaId])
 
   const toggle = (e: React.MouseEvent) => {
     e.stopPropagation()
-    const stored = JSON.parse(localStorage.getItem('cp_saved') || '[]') as number[]
-    const next = stored.includes(convocatoriaId)
-      ? stored.filter(id => id !== convocatoriaId)
-      : [...stored, convocatoriaId]
-    localStorage.setItem('cp_saved', JSON.stringify(next))
-    setSaved(next.includes(convocatoriaId))
+    if (!user) return
+    startTransition(async () => {
+      const nextSaved = await toggleGuardado(convocatoriaId, user.id)
+      setSaved(nextSaved)
+    })
   }
 
   return (
     <button
       onClick={toggle}
-      className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-gray-100 transition-colors"
+      disabled={isPending}
+      className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-gray-100 transition-colors disabled:opacity-50"
       aria-label={saved ? 'Quitar de guardados' : 'Guardar convocatoria'}
     >
       <i className={`${saved ? 'fas text-peru-red' : 'far text-gray-300'} fa-bookmark`} />

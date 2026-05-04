@@ -1,7 +1,8 @@
 'use server'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, unstable_cache } from 'next/cache'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createPublicClient } from '@supabase/supabase-js'
 import type { ConvocatoriaDetail } from '@/types/convocatoria'
 
 async function requireAdmin(supabase: Awaited<ReturnType<typeof createClient>>) {
@@ -19,19 +20,30 @@ async function requireAdmin(supabase: Awaited<ReturnType<typeof createClient>>) 
 
 // ── Public actions ────────────────────────────────────────────────────────────
 
+const fetchConvocatoriaDetail = unstable_cache(
+  async (id: number): Promise<ConvocatoriaDetail | null> => {
+    const db = createPublicClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+    const { data } = await db
+      .from('convocatorias')
+      .select(`
+        id, slug, titulo, ubicacion, sueldo, fecha_limite, fecha_pub,
+        tipo_contrato, nivel, req_preview, modalidad, descripcion,
+        requisitos, funciones, documentos, requerimientos, link_oficial,
+        entidad_id, entidades(nombre_oficial)
+      `)
+      .eq('id', id)
+      .single()
+    return data as ConvocatoriaDetail | null
+  },
+  ['convocatoria-detail'],
+  { revalidate: 3600, tags: ['convocatoria-detail'] }
+)
+
 export async function getConvocatoriaDetail(id: number): Promise<ConvocatoriaDetail | null> {
-  const supabase = await createClient()
-  const { data } = await supabase
-    .from('convocatorias')
-    .select(`
-      id, slug, titulo, ubicacion, sueldo, fecha_limite, fecha_pub,
-      tipo_contrato, nivel, req_preview, modalidad, descripcion,
-      requisitos, funciones, documentos, requerimientos, link_oficial,
-      entidad_id, entidades(nombre_oficial)
-    `)
-    .eq('id', id)
-    .single()
-  return data as ConvocatoriaDetail | null
+  return fetchConvocatoriaDetail(id)
 }
 
 export async function toggleGuardado(convocatoriaId: number, userId: string): Promise<boolean> {
@@ -176,7 +188,7 @@ export async function submitConvocatoria(
   const d = parsed.data
 
   // Resolve entity: look up by nombre_oficial or sinonimos
-  let entidadId: string
+  let entidadId: number
   const { data: found } = await supabase
     .from('entidades')
     .select('id')

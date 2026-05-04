@@ -1,7 +1,9 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useDetail } from '@/providers/DetailProvider'
-import { getConvocatoriaDetail } from '@/app/actions'
+import { useAuth } from '@/providers/AuthProvider'
+import { createClient } from '@/lib/supabase/client'
+import { getConvocatoriaDetail, toggleGuardado } from '@/app/actions'
 import type { ConvocatoriaDetail } from '@/types/convocatoria'
 
 const CONTRATO_COLORS: Record<string, string> = {
@@ -113,19 +115,41 @@ function Content({ data: c, onClose }: { data: ConvocatoriaDetail; onClose: () =
   const entidad   = c.entidades?.nombre_oficial ?? ''
   const daysLeft  = calcDaysLeft(c.fecha_limite)
   const isGeneric = !!(c.funciones?.[0]?.includes('según perfil'))
+  const { user }  = useAuth()
+  const [supabase] = useState(() => createClient())
 
   const [saved, setSaved] = useState(() => {
     if (typeof window === 'undefined') return false
     return (JSON.parse(localStorage.getItem('cp_saved') || '[]') as number[]).includes(c.id)
   })
 
-  const toggleSave = () => {
+  // Si hay sesión, sincroniza estado real desde la BD
+  useEffect(() => {
+    if (!user) return
+    supabase
+      .from('guardados')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('convocatoria_id', c.id)
+      .maybeSingle()
+      .then(({ data }) => setSaved(!!data))
+  }, [user, c.id, supabase])
+
+  const toggleSave = async () => {
+    const next = !saved
+    setSaved(next) // optimistic
+
+    // Siempre actualiza localStorage (funciona sin sesión)
     const stored = JSON.parse(localStorage.getItem('cp_saved') || '[]') as number[]
-    const next   = stored.includes(c.id)
-      ? stored.filter(id => id !== c.id)
-      : [...stored, c.id]
-    localStorage.setItem('cp_saved', JSON.stringify(next))
-    setSaved(next.includes(c.id))
+    localStorage.setItem('cp_saved', JSON.stringify(
+      next ? [...stored, c.id] : stored.filter(id => id !== c.id)
+    ))
+
+    // Si hay sesión, persiste en BD
+    if (user) {
+      const actual = await toggleGuardado(c.id, user.id)
+      setSaved(actual)
+    }
   }
 
   return (

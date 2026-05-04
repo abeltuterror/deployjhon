@@ -1,5 +1,5 @@
 -- ============================================================
--- CONVOCAPE — Schema completo
+-- CONVOCAPE — Schema definitivo (listo para producción)
 -- Ejecutar UNA sola vez en Supabase SQL Editor
 -- ============================================================
 
@@ -7,23 +7,21 @@
 -- ─── 1. ENTIDADES ────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS entidades (
-  id             UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  id             BIGINT      GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   nombre_oficial TEXT        UNIQUE NOT NULL,
   sinonimos      TEXT[]      DEFAULT '{}'::TEXT[],
   validada       BOOLEAN     DEFAULT FALSE,
   dominio_email  TEXT        -- Ej: 'minedu.gob.pe'
 );
-
-CREATE INDEX IF NOT EXISTS idx_entidades_nombre_oficial
-  ON entidades (nombre_oficial);
+-- El UNIQUE sobre nombre_oficial ya crea un índice único automático
 
 
 -- ─── 2. PERFILES (vinculado a Supabase Auth) ─────────────────
 
 CREATE TABLE IF NOT EXISTS perfiles (
-  id         UUID  PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  rol        TEXT  DEFAULT 'ciudadano',
-  entidad_id UUID  REFERENCES entidades(id) ON DELETE SET NULL
+  id         UUID   PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  rol        TEXT   DEFAULT 'ciudadano',
+  entidad_id BIGINT REFERENCES entidades(id) ON DELETE SET NULL
 );
 
 -- Trigger: crea perfil automáticamente al registrarse
@@ -39,11 +37,13 @@ BEGIN
     NEW.id,
     CASE
       WHEN email_domain IN (
-        SELECT dominio_email FROM entidades WHERE dominio_email IS NOT NULL
+        SELECT dominio_email FROM public.entidades WHERE dominio_email IS NOT NULL
       ) THEN 'entidad_pendiente'
       ELSE 'ciudadano'
     END
-  );
+  )
+  ON CONFLICT (id) DO NOTHING;
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -57,8 +57,8 @@ CREATE TRIGGER on_auth_user_created
 -- ─── 3. CONVOCATORIAS ────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS convocatorias (
-  id               BIGSERIAL   PRIMARY KEY,
-  entidad_id       UUID        REFERENCES entidades(id) ON DELETE SET NULL,
+  id               BIGINT      GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  entidad_id       BIGINT      REFERENCES entidades(id) ON DELETE SET NULL,
   titulo           TEXT        NOT NULL,
   slug             TEXT        UNIQUE NOT NULL,
   ubicacion        TEXT        NOT NULL,
@@ -80,7 +80,8 @@ CREATE TABLE IF NOT EXISTS convocatorias (
   numero_folio     TEXT
 );
 
--- Índice único para deduplicar por folio (ignora nulos/vacíos)
+-- Índice único parcial para deduplicar por folio (ignora nulos y vacíos)
+-- PostgREST no admite índices parciales en ON CONFLICT → el upsert usa slug
 CREATE UNIQUE INDEX IF NOT EXISTS idx_convocatorias_numero_folio_unique
   ON convocatorias (numero_folio)
   WHERE numero_folio IS NOT NULL AND numero_folio != '';
@@ -91,11 +92,16 @@ CREATE INDEX IF NOT EXISTS idx_convocatorias_fecha_limite ON convocatorias (fech
 CREATE INDEX IF NOT EXISTS idx_convocatorias_entidad_id   ON convocatorias (entidad_id);
 CREATE INDEX IF NOT EXISTS idx_convocatorias_slug         ON convocatorias (slug);
 
+-- Índice compuesto para la query principal (estado + sort por defecto)
+-- Cubre: WHERE estado = 'activa' ORDER BY fecha_pub DESC
+CREATE INDEX IF NOT EXISTS idx_convocatorias_estado_fecha_pub
+  ON convocatorias (estado, fecha_pub DESC);
+
 
 -- ─── 4. GUARDADOS (favoritos del ciudadano) ──────────────────
 
 CREATE TABLE IF NOT EXISTS guardados (
-  id               BIGSERIAL   PRIMARY KEY,
+  id               BIGINT      GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   user_id          UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   convocatoria_id  BIGINT      NOT NULL REFERENCES convocatorias(id) ON DELETE CASCADE,
   created_at       TIMESTAMPTZ DEFAULT NOW(),
@@ -121,7 +127,7 @@ CREATE POLICY "perfiles_select_own"
 CREATE POLICY "perfiles_update_own"
   ON perfiles FOR UPDATE USING (auth.uid() = id);
 
--- Convocatorias: lectura pública
+-- Convocatorias: lectura pública (sitio web y scraper)
 CREATE POLICY "convocatorias_select_public"
   ON convocatorias FOR SELECT USING (true);
 
