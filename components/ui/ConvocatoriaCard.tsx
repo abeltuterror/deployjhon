@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import type { ConvocatoriaListItem } from '@/types/convocatoria'
 import BookmarkButton from './BookmarkButton'
-import OpenDetailButton from './OpenDetailButton'
+
 
 interface Props {
   convocatoria: ConvocatoriaListItem
@@ -85,7 +85,12 @@ export default function ConvocatoriaCard({ convocatoria: c, isSaved, index }: Pr
         <span className={`tag ${urgency.cls}`}>
           <i className="fas fa-clock mr-1" />{urgency.text}
         </span>
-        <OpenDetailButton convocatoriaId={c.id} />
+        <Link
+          href={`/convocatorias/${c.slug}`}
+          className="text-sm font-semibold text-peru-red hover:text-peru-dark transition-colors flex items-center gap-1"
+        >
+          Ver detalles <i className="fas fa-arrow-right text-xs" />
+        </Link>
       </div>
     </article>
   )

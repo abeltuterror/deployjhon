@@ -12,6 +12,7 @@ interface Props {
 export const revalidate = 3600
 
 export async function generateStaticParams() {
+  if (process.env.NODE_ENV === 'development') return []
   const entidades = await getAllEntidades()
   return entidades.map(e => ({ slug: slugifyEntidad(e.nombre_oficial) }))
 }

@@ -11,6 +11,8 @@ interface Props {
 export const revalidate = 3600
 
 export async function generateStaticParams() {
+  // En dev no pre-renderizamos nada — solo en producción (build time)
+  if (process.env.NODE_ENV === 'development') return []
   const slugs = await getAllActiveSlugs()
   return slugs.slice(0, 200).map(s => ({ slug: s.slug }))
 }
