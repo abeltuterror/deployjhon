@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import type { ConvocatoriaListItem } from '@/types/convocatoria'
 import BookmarkButton from './BookmarkButton'
 import OpenDetailButton from './OpenDetailButton'
@@ -60,10 +61,12 @@ export default function ConvocatoriaCard({ convocatoria: c, isSaved, index }: Pr
         <BookmarkButton convocatoriaId={c.id} isSaved={isSaved} />
       </div>
 
-      {/* Título */}
-      <h3 className="font-heading font-600 text-base text-gray-900 mb-2 line-clamp-2 leading-snug">
-        {c.titulo}
-      </h3>
+      {/* Título — Link a página SEO para crawl de Google, modal para UX */}
+      <Link href={`/convocatorias/${c.slug}`}>
+        <h3 className="font-heading font-600 text-base text-gray-900 mb-2 line-clamp-2 leading-snug hover:text-peru-red transition-colors">
+          {c.titulo}
+        </h3>
+      </Link>
 
       {/* req_preview — datos ya limpios del scraper */}
       {c.req_preview.length > 0 && (
