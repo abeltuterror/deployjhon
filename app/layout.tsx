@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Script from 'next/script'
 import './globals.css'
 import { DetailProvider } from '@/providers/DetailProvider'
 import { AuthProvider } from '@/providers/AuthProvider'
@@ -9,10 +10,25 @@ import DetailModal from '@/components/panels/DetailModal'
 import UserPanel from '@/components/panels/UserPanel'
 import AdminPanel from '@/components/panels/AdminPanel'
 import RevealObserver from '@/components/shared/RevealObserver'
+import { BASE_URL } from '@/lib/seo'
+
+const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID
 
 export const metadata: Metadata = {
-  title: 'Convocatorias Perú — Empleo Público en un Solo Lugar',
-  description: 'Encuentra convocatorias del Estado peruano. Filtra, analiza y postula más rápido.',
+  metadataBase: new URL(BASE_URL),
+  title: {
+    default: 'Convocatorias del Estado Peruano 2026 | Empleo Público en Perú',
+    template: '%s | Convocape',
+  },
+  description: 'Encuentra las últimas convocatorias CAS, 728 y 276. Filtra por entidad, sueldo y ubicación. Actualizado diariamente.',
+  openGraph: {
+    type: 'website',
+    locale: 'es_PE',
+    siteName: 'Convocape',
+  },
+  alternates: {
+    canonical: BASE_URL,
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -32,6 +48,23 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </DetailProvider>
           </PanelProvider>
         </AuthProvider>
+
+        {GA_ID && (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+              strategy="afterInteractive"
+            />
+            <Script id="ga-init" strategy="afterInteractive">
+              {`
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', '${GA_ID}', { page_path: window.location.pathname });
+              `}
+            </Script>
+          </>
+        )}
       </body>
     </html>
   )

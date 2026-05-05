@@ -21,4 +21,5 @@ export interface ConvocatoriaDetail extends ConvocatoriaListItem {
   requerimientos: Record<string, unknown> | null
   link_oficial: string | null
   entidad_id: string
+  estado: string
 }

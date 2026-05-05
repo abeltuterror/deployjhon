@@ -46,6 +46,81 @@ export async function getConvocatoriaDetail(id: number): Promise<ConvocatoriaDet
   return fetchConvocatoriaDetail(id)
 }
 
+export const getConvocatoriaBySlug = unstable_cache(
+  async (slug: string): Promise<ConvocatoriaDetail | null> => {
+    const db = createPublicClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+    const { data } = await db
+      .from('convocatorias')
+      .select(`
+        id, slug, titulo, ubicacion, sueldo, fecha_limite, fecha_pub,
+        tipo_contrato, nivel, req_preview, modalidad, descripcion,
+        requisitos, funciones, documentos, requerimientos, link_oficial,
+        estado, entidad_id, entidades(nombre_oficial)
+      `)
+      .eq('slug', slug)
+      .single()
+    return data as ConvocatoriaDetail | null
+  },
+  ['convocatoria-by-slug'],
+  { revalidate: 3600 }
+)
+
+export const getAllActiveSlugs = unstable_cache(
+  async (): Promise<{ slug: string; fecha_pub: string }[]> => {
+    const db = createPublicClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+    const { data } = await db
+      .from('convocatorias')
+      .select('slug, fecha_pub')
+      .eq('estado', 'activa')
+      .order('fecha_pub', { ascending: false })
+      .limit(500)
+    return data ?? []
+  },
+  ['all-active-slugs'],
+  { revalidate: 3600 }
+)
+
+export const getAllEntidades = unstable_cache(
+  async (): Promise<{ id: number; nombre_oficial: string }[]> => {
+    const db = createPublicClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+    const { data } = await db
+      .from('entidades')
+      .select('id, nombre_oficial')
+      .order('nombre_oficial')
+    return (data ?? []) as { id: number; nombre_oficial: string }[]
+  },
+  ['all-entidades'],
+  { revalidate: 3600 }
+)
+
+export const getConvocatoriasByEntidad = unstable_cache(
+  async (entidadId: number): Promise<import('@/types/convocatoria').ConvocatoriaListItem[]> => {
+    const db = createPublicClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+    const { data } = await db
+      .from('convocatorias')
+      .select('id, slug, titulo, ubicacion, sueldo, fecha_limite, tipo_contrato, nivel, req_preview, modalidad, entidades(nombre_oficial)')
+      .eq('entidad_id', entidadId)
+      .eq('estado', 'activa')
+      .order('fecha_pub', { ascending: false })
+      .limit(24)
+    return (data as unknown as import('@/types/convocatoria').ConvocatoriaListItem[]) ?? []
+  },
+  ['convocatorias-by-entidad'],
+  { revalidate: 3600 }
+)
+
 export async function toggleGuardado(convocatoriaId: number, userId: string): Promise<boolean> {
   const supabase = await createClient()
   const { data: existing } = await supabase
