@@ -29,6 +29,11 @@ export const metadata: Metadata = {
   alternates: {
     canonical: BASE_URL,
   },
+  icons: {
+    icon: "/favicon.png",   // 👈 Ruta absoluta desde public/
+    // Opcionalmente puedes definir múltiples tamaños:
+    // icon: [{ url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" }],
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
