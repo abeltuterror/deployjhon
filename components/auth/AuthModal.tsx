@@ -83,9 +83,10 @@ function LoginView({ onClose, setMode }: { onClose: () => void; setMode: (m: Mod
   }
 
   const handleGoogle = async () => {
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: { redirectTo: `${siteUrl}/auth/callback` },
     })
   }
 
@@ -228,9 +229,10 @@ function RegisterView({ onClose, setMode }: { onClose: () => void; setMode: (m: 
   }
 
   const handleGoogle = async () => {
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: { redirectTo: `${siteUrl}/auth/callback` },
     })
   }
 

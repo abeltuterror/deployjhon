@@ -13,3 +13,6 @@ out/
 # Build
 .turbo/
 tsconfig.tsbuildinfo
+
+# Docs
+*.md
