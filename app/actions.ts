@@ -323,13 +323,8 @@ export async function checkEmailExists(email: string): Promise<boolean> {
   try {
     const { createAdminClient } = await import('@/lib/supabase/admin')
     const admin = createAdminClient()
-    const { data } = await admin
-      .schema('auth')
-      .from('users')
-      .select('id')
-      .ilike('email', email.trim())
-      .maybeSingle()
-    return !!data
+    const { data } = await admin.auth.admin.listUsers()
+    return (data?.users ?? []).some(u => u.email?.toLowerCase() === email.toLowerCase())
   } catch {
     return false
   }
