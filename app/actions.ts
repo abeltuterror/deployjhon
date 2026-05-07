@@ -317,6 +317,15 @@ export async function deleteConvocatoria(id: number): Promise<void> {
   revalidatePath('/')
 }
 
+// ── Auth helpers ─────────────────────────────────────────────────────────────
+
+export async function checkEmailExists(email: string): Promise<boolean> {
+  const { createAdminClient } = await import('@/lib/supabase/admin')
+  const admin = createAdminClient()
+  const { data } = await admin.auth.admin.listUsers()
+  return (data?.users ?? []).some(u => u.email?.toLowerCase() === email.toLowerCase())
+}
+
 // ── Freemium ──────────────────────────────────────────────────────────────────
 
 export async function verificarPremium(): Promise<boolean> {

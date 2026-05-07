@@ -1,6 +1,8 @@
 'use client'
+'use client'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { checkEmailExists } from '@/app/actions'
 
 type Mode = 'login' | 'register' | 'forgot'
 
@@ -212,6 +214,12 @@ function RegisterView({ onClose, setMode }: { onClose: () => void; setMode: (m: 
     }
 
     setLoading(true)
+    const exists = await checkEmailExists(email)
+    if (exists) {
+      setLoading(false)
+      setError('__already_registered__')
+      return
+    }
     // NO insertar en perfiles — el trigger de BD lo hace automáticamente
     const { error: err } = await supabase.auth.signUp({ email, password })
     setLoading(false)
