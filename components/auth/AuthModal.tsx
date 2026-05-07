@@ -218,7 +218,7 @@ function RegisterView({ onClose, setMode }: { onClose: () => void; setMode: (m: 
 
     if (err) {
       if (err.message.includes('already registered') || err.message.includes('User already registered')) {
-        setError('Este correo ya tiene una cuenta. Inicia sesión o usa "¿Olvidaste tu contraseña?".')
+        setError('__already_registered__')
       } else {
         setError(err.message)
       }
@@ -298,11 +298,29 @@ function RegisterView({ onClose, setMode }: { onClose: () => void; setMode: (m: 
           />
         </div>
 
-        {error && (
+        {error === '__already_registered__' ? (
+          <div className="text-xs bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 space-y-1">
+            <p className="text-amber-800 font-semibold">
+              <i className="fas fa-exclamation-triangle mr-1.5" />
+              Este correo ya tiene una cuenta.
+            </p>
+            <p className="text-amber-700">
+              Si te registraste con Google,{' '}
+              <button
+                type="button"
+                onClick={handleGoogle}
+                className="font-semibold underline underline-offset-2"
+              >
+                ingresa con Google
+              </button>
+              {' '}y desde tu perfil puedes vincular una contraseña.
+            </p>
+          </div>
+        ) : error ? (
           <p className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">
             <i className="fas fa-exclamation-circle mr-1" />{error}
           </p>
-        )}
+        ) : null}
 
         <button
           type="submit" disabled={loading}
