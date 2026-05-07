@@ -7,7 +7,7 @@ import { dirname, join } from 'path'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
-const API_URL = 'http://localhost:3000/api/convocatorias'
+const API_URL = 'https://www.convocape.com/api/convocatorias'
 const API_KEY = 'mi-clave-secreta-2024'
 const BATCH_SIZE = 200  // registros por request
 

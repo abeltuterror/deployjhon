@@ -5,6 +5,7 @@ import { useAuth } from '@/providers/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
 import { getConvocatoriaDetail, toggleGuardado } from '@/app/actions'
 import type { ConvocatoriaDetail } from '@/types/convocatoria'
+import CalendarButton from '@/components/ui/CalendarButton'
 
 const CONTRATO_COLORS: Record<string, string> = {
   'CAS':      'bg-blue-100 text-blue-700',
@@ -245,32 +246,42 @@ function Content({ data: c, onClose }: { data: ConvocatoriaDetail; onClose: () =
       )}
 
       {/* Sticky actions */}
-      <div className="flex flex-col sm:flex-row gap-3 sticky bottom-0 bg-white pt-4 border-t border-gray-100">
-        <button
-          onClick={toggleSave}
-          className={`flex-1 px-5 py-3 rounded-xl border-2 font-semibold text-sm transition-colors flex items-center justify-center gap-2
-            ${saved
-              ? 'border-peru-red bg-peru-light text-peru-red'
-              : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`}
-        >
-          <i className={`${saved ? 'fas' : 'far'} fa-bookmark`} />
-          {saved ? 'Guardado' : 'Guardar'}
-        </button>
-
-        {c.link_oficial ? (
-          <a
-            href={c.link_oficial}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex-1 px-5 py-3 rounded-xl bg-peru-red hover:bg-peru-dark text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2 shadow-lg shadow-peru-red/20"
+      <div className="sticky bottom-0 bg-white pt-4 border-t border-gray-100 space-y-2">
+        <div className="flex gap-3">
+          <button
+            onClick={toggleSave}
+            className={`flex-1 px-5 py-3 rounded-xl border-2 font-semibold text-sm transition-colors flex items-center justify-center gap-2
+              ${saved
+                ? 'border-peru-red bg-peru-light text-peru-red'
+                : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`}
           >
-            <i className="fas fa-paper-plane" /> Postular
-          </a>
-        ) : (
-          <button disabled className="flex-1 px-5 py-3 rounded-xl bg-gray-200 text-gray-400 font-semibold text-sm flex items-center justify-center gap-2">
-            <i className="fas fa-paper-plane" /> Sin link disponible
+            <i className={`${saved ? 'fas' : 'far'} fa-bookmark`} />
+            {saved ? 'Guardado' : 'Guardar'}
           </button>
-        )}
+
+          {c.link_oficial ? (
+            <a
+              href={c.link_oficial}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 px-5 py-3 rounded-xl bg-peru-red hover:bg-peru-dark text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2 shadow-lg shadow-peru-red/20"
+            >
+              <i className="fas fa-paper-plane" /> Postular
+            </a>
+          ) : (
+            <button disabled className="flex-1 px-5 py-3 rounded-xl bg-gray-200 text-gray-400 font-semibold text-sm flex items-center justify-center gap-2">
+              <i className="fas fa-paper-plane" /> Sin link disponible
+            </button>
+          )}
+        </div>
+
+        <CalendarButton
+          titulo={c.titulo}
+          fechaLimite={c.fecha_limite}
+          entidad={entidad}
+          ubicacion={c.ubicacion}
+          slug={c.slug}
+        />
       </div>
 
       {c.link_oficial && (

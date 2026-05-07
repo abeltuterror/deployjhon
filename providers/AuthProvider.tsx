@@ -7,6 +7,9 @@ export interface Perfil {
   id: string
   rol: string
   entidad_id: string | null
+  premium_hasta: string | null
+  whatsapp_numero: string | null
+  trial_usado: boolean
 }
 
 interface AuthContextType {
@@ -27,7 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loadProfile = useCallback(async (uid: string) => {
     const { data } = await supabase
       .from('perfiles')
-      .select('id, rol, entidad_id')
+      .select('id, rol, entidad_id, premium_hasta, whatsapp_numero, trial_usado')
       .eq('id', uid)
       .single()
     setProfile(data ?? null)

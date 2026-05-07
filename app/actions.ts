@@ -316,3 +316,75 @@ export async function deleteConvocatoria(id: number): Promise<void> {
   await supabase.from('convocatorias').delete().eq('id', id)
   revalidatePath('/')
 }
+
+// ── Freemium ──────────────────────────────────────────────────────────────────
+
+export async function verificarPremium(): Promise<boolean> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return false
+
+  const { data } = await supabase
+    .from('perfiles')
+    .select('premium_hasta')
+    .eq('id', user.id)
+    .single()
+
+  if (!data?.premium_hasta) return false
+  return new Date(data.premium_hasta) > new Date()
+}
+
+export async function registrarWhatsapp(numero: string): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'No autenticado' }
+
+  const limpio = numero.replace(/\D/g, '')
+  if (limpio.length < 9 || limpio.length > 15) return { error: 'Número inválido' }
+
+  const { error } = await supabase
+    .from('perfiles')
+    .update({ whatsapp_numero: `+51${limpio.slice(-9)}` })
+    .eq('id', user.id)
+
+  return error ? { error: error.message } : {}
+}
+
+export async function actualizarEstadoPostulacion(
+  postulacionId: number,
+  estado: 'postulando' | 'evaluacion' | 'descartado'
+): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+
+  await supabase
+    .from('postulaciones')
+    .update({ estado })
+    .eq('id', postulacionId)
+    .eq('user_id', user.id)
+}
+
+export async function activarTrial(): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'No autenticado' }
+
+  const { data: perfil } = await supabase
+    .from('perfiles')
+    .select('trial_usado, premium_hasta')
+    .eq('id', user.id)
+    .single()
+
+  if (perfil?.trial_usado) return { error: 'Ya usaste tu prueba gratuita' }
+
+  const hasta = new Date()
+  hasta.setDate(hasta.getDate() + 3)
+
+  const { error } = await supabase
+    .from('perfiles')
+    .update({ trial_usado: true, premium_hasta: hasta.toISOString() })
+    .eq('id', user.id)
+
+  return error ? { error: error.message } : {}
+}

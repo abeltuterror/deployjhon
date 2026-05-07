@@ -4,7 +4,9 @@ import type { User } from '@supabase/supabase-js'
 import { usePanel } from '@/providers/PanelProvider'
 import { useAuth } from '@/providers/AuthProvider'
 import { createClient } from '@/lib/supabase/client'
+import { registrarWhatsapp, actualizarEstadoPostulacion } from '@/app/actions'
 import AuthModal from '@/components/auth/AuthModal'
+import PaywallModal from '@/components/ui/PaywallModal'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -24,6 +26,7 @@ interface GuardadaRow {
 interface PostulacionRow {
   id: number
   created_at: string
+  estado: string
   convocatorias: {
     id: number
     titulo: string
@@ -41,12 +44,17 @@ interface AlertaRow {
 
 type Tab = 'guardadas' | 'postulaciones' | 'alertas' | 'cuenta'
 
+const ESTADOS_KANBAN = [
+  { value: 'postulando',  label: 'Postulando',   color: 'bg-blue-100 text-blue-700'   },
+  { value: 'evaluacion',  label: 'En evaluación', color: 'bg-amber-100 text-amber-700' },
+  { value: 'descartado',  label: 'Descartado',    color: 'bg-gray-100 text-gray-500'   },
+] as const
+
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export default function UserPanel() {
   const { activePanel, closePanel } = usePanel()
   const { user, loading: authLoading } = useAuth()
-
   const [visible, setVisible]     = useState(false)
   const [panelOpen, setPanelOpen] = useState(false)
 
@@ -97,14 +105,19 @@ export default function UserPanel() {
 // ── Tabs View ─────────────────────────────────────────────────────────────────
 
 function TabsView({ user, onClose }: { user: User; onClose: () => void }) {
-  const { signOut } = useAuth()
+  const { signOut, profile } = useAuth()
   const [supabase] = useState(() => createClient())
   const [tab, setTab] = useState<Tab>('guardadas')
+  const [showPaywall, setShowPaywall] = useState(false)
 
   const [guardadas, setGuardadas]         = useState<GuardadaRow[] | null>(null)
   const [postulaciones, setPostulaciones] = useState<PostulacionRow[] | null>(null)
   const [alertas, setAlertas]             = useState<AlertaRow[] | null>(null)
   const [loadingData, setLoadingData]     = useState(false)
+
+  const esPremium = profile?.premium_hasta
+    ? new Date(profile.premium_hasta) > new Date()
+    : false
 
   useEffect(() => {
     if (tab === 'guardadas' && guardadas === null) {
@@ -119,7 +132,7 @@ function TabsView({ user, onClose }: { user: User; onClose: () => void }) {
       setLoadingData(true)
       supabase
         .from('postulaciones')
-        .select('id, created_at, convocatorias(id, titulo, ubicacion, fecha_limite, entidades(nombre_oficial))')
+        .select('id, created_at, estado, convocatorias(id, titulo, ubicacion, fecha_limite, entidades(nombre_oficial))')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .then(({ data }) => { setPostulaciones((data as unknown as PostulacionRow[]) ?? []); setLoadingData(false) })
@@ -135,10 +148,7 @@ function TabsView({ user, onClose }: { user: User; onClose: () => void }) {
     }
   }, [tab, user.id, supabase, guardadas, postulaciones, alertas])
 
-  const handleSignOut = async () => {
-    await signOut()
-    onClose()
-  }
+  const handleSignOut = async () => { await signOut(); onClose() }
 
   const removeGuardada = async (id: number) => {
     await supabase.from('guardados').delete().eq('id', id)
@@ -159,6 +169,13 @@ function TabsView({ user, onClose }: { user: User; onClose: () => void }) {
     if (data) setAlertas(prev => [data as AlertaRow, ...(prev ?? [])])
   }
 
+  const updateEstadoPostulacion = async (id: number, estado: 'postulando' | 'evaluacion' | 'descartado') => {
+    await actualizarEstadoPostulacion(id, estado)
+    setPostulaciones(prev =>
+      prev?.map(p => p.id === id ? { ...p, estado } : p) ?? []
+    )
+  }
+
   const TABS: { key: Tab; label: string; icon: string }[] = [
     { key: 'guardadas',     label: 'Guardadas',     icon: 'fa-bookmark'     },
     { key: 'postulaciones', label: 'Postulaciones', icon: 'fa-paper-plane'  },
@@ -168,10 +185,19 @@ function TabsView({ user, onClose }: { user: User; onClose: () => void }) {
 
   return (
     <>
+      {showPaywall && <PaywallModal onClose={() => setShowPaywall(false)} feature="Alertas por WhatsApp" />}
+
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div>
-          <p className="text-xs text-gray-500">Sesión activa</p>
+          <div className="flex items-center gap-2">
+            <p className="text-xs text-gray-500">Sesión activa</p>
+            {esPremium && (
+              <span className="flex items-center gap-1 bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                <i className="fas fa-crown text-[9px]" /> PREMIUM
+              </span>
+            )}
+          </div>
           <p className="text-sm font-semibold text-gray-800 truncate max-w-50">{user.email}</p>
         </div>
         <div className="flex items-center gap-2">
@@ -189,6 +215,21 @@ function TabsView({ user, onClose }: { user: User; onClose: () => void }) {
           </button>
         </div>
       </div>
+
+      {/* Banner upgrade si no es premium */}
+      {!esPremium && (
+        <button
+          onClick={() => setShowPaywall(true)}
+          className="w-full mb-4 bg-linear-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl px-4 py-2.5 flex items-center gap-3 hover:border-amber-300 transition-colors text-left"
+        >
+          <i className="fas fa-crown text-amber-500" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-gray-800">Activa Premium</p>
+            <p className="text-[10px] text-gray-500">Alertas WhatsApp · Kanban · S/ 20/mes</p>
+          </div>
+          <i className="fas fa-chevron-right text-gray-400 text-xs shrink-0" />
+        </button>
+      )}
 
       {/* Tabs */}
       <div className="flex border-b border-gray-200 mb-6 -mx-6 px-6">
@@ -209,23 +250,32 @@ function TabsView({ user, onClose }: { user: User; onClose: () => void }) {
 
       {/* Tab Content */}
       {tab === 'cuenta' ? (
-        <CuentaTab user={user} />
+        <CuentaTab user={user} esPremium={esPremium} onUpgrade={() => setShowPaywall(true)} />
       ) : loadingData ? (
         <TabSkeleton />
       ) : tab === 'guardadas' ? (
         <GuardadasTab items={guardadas ?? []} onRemove={removeGuardada} />
       ) : tab === 'postulaciones' ? (
-        <PostulacionesTab items={postulaciones ?? []} />
+        <PostulacionesTab items={postulaciones ?? []} onEstadoChange={updateEstadoPostulacion} />
       ) : (
-        <AlertasTab items={alertas ?? []} onRemove={removeAlerta} onAdd={addAlerta} />
+        <AlertasTab
+          items={alertas ?? []}
+          onRemove={removeAlerta}
+          onAdd={addAlerta}
+          esPremium={esPremium}
+          whatsappNumero={profile?.whatsapp_numero ?? null}
+          onUpgrade={() => setShowPaywall(true)}
+        />
       )}
     </>
   )
 }
 
-// ── Tab: Cuenta (vincular / cambiar contraseña) ───────────────────────────────
+// ── Tab: Cuenta ───────────────────────────────────────────────────────────────
 
-function CuentaTab({ user }: { user: User }) {
+function CuentaTab({
+  user, esPremium, onUpgrade,
+}: { user: User; esPremium: boolean; onUpgrade: () => void }) {
   const [supabase]     = useState(() => createClient())
   const [password, setPassword]   = useState('')
   const [confirm, setConfirm]     = useState('')
@@ -233,42 +283,52 @@ function CuentaTab({ user }: { user: User }) {
   const [success, setSuccess]     = useState(false)
   const [loading, setLoading]     = useState(false)
 
-  // Si no hay identidad "email", el usuario solo se registró con Google
   const hasEmailProvider = user.identities?.some(i => i.provider === 'email') ?? false
-  const title = hasEmailProvider ? 'Cambiar contraseña' : 'Vincular contraseña'
+  const title    = hasEmailProvider ? 'Cambiar contraseña' : 'Vincular contraseña'
   const subtitle = hasEmailProvider
     ? 'Actualiza tu contraseña de acceso.'
-    : 'Vincula una contraseña para poder iniciar sesión también con tu correo y contraseña.'
+    : 'Vincula una contraseña para iniciar sesión también con email y contraseña.'
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError('')
-    setSuccess(false)
-
-    if (password.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres.')
-      return
-    }
-    if (password !== confirm) {
-      setError('Las contraseñas no coinciden.')
-      return
-    }
-
+    setError(''); setSuccess(false)
+    if (password.length < 6) { setError('La contraseña debe tener al menos 6 caracteres.'); return }
+    if (password !== confirm) { setError('Las contraseñas no coinciden.'); return }
     setLoading(true)
     const { error: err } = await supabase.auth.updateUser({ password })
     setLoading(false)
-
     if (err) { setError(err.message); return }
-
-    setSuccess(true)
-    setPassword('')
-    setConfirm('')
+    setSuccess(true); setPassword(''); setConfirm('')
   }
 
   return (
     <div>
-      {/* Info del proveedor */}
-      <div className="bg-gray-50 rounded-xl p-4 mb-6">
+      {/* Estado Premium */}
+      <div className={`rounded-xl p-4 mb-5 ${esPremium ? 'bg-amber-50 border border-amber-200' : 'bg-gray-50'}`}>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-gray-500 mb-1">Plan actual</p>
+            {esPremium ? (
+              <p className="text-sm font-bold text-amber-700 flex items-center gap-1.5">
+                <i className="fas fa-crown" /> Premium activo
+              </p>
+            ) : (
+              <p className="text-sm font-semibold text-gray-700">Gratuito</p>
+            )}
+          </div>
+          {!esPremium && (
+            <button
+              onClick={onUpgrade}
+              className="text-xs font-semibold text-white bg-amber-500 hover:bg-amber-600 px-3 py-1.5 rounded-lg transition-colors"
+            >
+              Mejorar
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Proveedor */}
+      <div className="bg-gray-50 rounded-xl p-4 mb-5">
         <p className="text-xs font-semibold text-gray-500 mb-2">Método de inicio de sesión</p>
         <div className="flex items-center gap-2">
           {user.identities?.map(identity => (
@@ -292,7 +352,6 @@ function CuentaTab({ user }: { user: User }) {
         </div>
       </div>
 
-      {/* Formulario */}
       <h3 className="text-sm font-semibold text-gray-800 mb-1">{title}</h3>
       <p className="text-xs text-gray-500 mb-4">{subtitle}</p>
 
@@ -308,9 +367,7 @@ function CuentaTab({ user }: { user: User }) {
           />
         </div>
         <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-1.5">
-            Confirmar contraseña
-          </label>
+          <label className="block text-xs font-semibold text-gray-600 mb-1.5">Confirmar contraseña</label>
           <input
             type="password" required value={confirm} onChange={e => setConfirm(e.target.value)}
             placeholder="Repite la contraseña"
@@ -326,7 +383,7 @@ function CuentaTab({ user }: { user: User }) {
         {success && (
           <p className="text-xs text-green-700 bg-green-50 rounded-lg px-3 py-2">
             <i className="fas fa-check-circle mr-1" />
-            {hasEmailProvider ? 'Contraseña actualizada correctamente.' : 'Contraseña vinculada. Ya puedes iniciar sesión con email y contraseña.'}
+            {hasEmailProvider ? 'Contraseña actualizada correctamente.' : 'Contraseña vinculada.'}
           </p>
         )}
 
@@ -366,7 +423,6 @@ function GuardadasTab({ items, onRemove }: { items: GuardadaRow[]; onRemove: (id
               <button
                 onClick={() => onRemove(g.id)}
                 className="shrink-0 w-7 h-7 rounded-lg bg-white border border-gray-200 hover:bg-red-50 hover:border-red-200 flex items-center justify-center transition-colors"
-                aria-label="Quitar guardado"
               >
                 <i className="fas fa-times text-gray-400 text-xs" />
               </button>
@@ -378,9 +434,14 @@ function GuardadasTab({ items, onRemove }: { items: GuardadaRow[]; onRemove: (id
   )
 }
 
-// ── Tab: Postulaciones ────────────────────────────────────────────────────────
+// ── Tab: Postulaciones (Kanban) ───────────────────────────────────────────────
 
-function PostulacionesTab({ items }: { items: PostulacionRow[] }) {
+function PostulacionesTab({
+  items, onEstadoChange,
+}: {
+  items: PostulacionRow[]
+  onEstadoChange: (id: number, estado: 'postulando' | 'evaluacion' | 'descartado') => void
+}) {
   if (items.length === 0)
     return <EmptyState icon="fa-paper-plane" text="Aún no has postulado a ninguna convocatoria." />
 
@@ -389,18 +450,29 @@ function PostulacionesTab({ items }: { items: PostulacionRow[] }) {
       {items.map(p => {
         const c = p.convocatorias
         if (!c) return null
+        const estadoInfo = ESTADOS_KANBAN.find(e => e.value === p.estado) ?? ESTADOS_KANBAN[0]
         return (
           <li key={p.id} className="bg-gray-50 rounded-xl p-4">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <p className="text-sm font-semibold text-gray-900 leading-tight">{c.titulo}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{c.entidades?.nombre_oficial}</p>
-                <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
-                  <span><i className="fas fa-map-marker-alt mr-1 text-peru-red" />{c.ubicacion}</span>
-                  <span><i className="fas fa-calendar mr-1 text-peru-red" />Límite: {c.fecha_limite}</span>
-                </div>
-              </div>
-              <span className="tag bg-green-100 text-green-700 shrink-0">Postulado</span>
+            <p className="text-sm font-semibold text-gray-900 leading-tight line-clamp-2 mb-0.5">{c.titulo}</p>
+            <p className="text-xs text-gray-500 mb-2">{c.entidades?.nombre_oficial}</p>
+            <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
+              <span><i className="fas fa-map-marker-alt mr-1 text-peru-red" />{c.ubicacion}</span>
+              <span><i className="fas fa-calendar mr-1 text-peru-red" />{c.fecha_limite}</span>
+            </div>
+            {/* Selector de estado Kanban */}
+            <div className="flex gap-1.5 flex-wrap">
+              {ESTADOS_KANBAN.map(e => (
+                <button
+                  key={e.value}
+                  onClick={() => onEstadoChange(p.id, e.value)}
+                  className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition-colors
+                    ${p.estado === e.value
+                      ? `${e.color} border-transparent`
+                      : 'bg-white border-gray-200 text-gray-400 hover:border-gray-300'}`}
+                >
+                  {e.label}
+                </button>
+              ))}
             </div>
           </li>
         )
@@ -412,14 +484,20 @@ function PostulacionesTab({ items }: { items: PostulacionRow[] }) {
 // ── Tab: Alertas ──────────────────────────────────────────────────────────────
 
 function AlertasTab({
-  items, onRemove, onAdd,
+  items, onRemove, onAdd, esPremium, whatsappNumero, onUpgrade,
 }: {
   items: AlertaRow[]
   onRemove: (id: number) => void
   onAdd: (texto: string) => Promise<void>
+  esPremium: boolean
+  whatsappNumero: string | null
+  onUpgrade: () => void
 }) {
-  const [texto, setTexto]   = useState('')
-  const [saving, setSaving] = useState(false)
+  const [texto, setTexto]     = useState('')
+  const [saving, setSaving]   = useState(false)
+  const [wa, setWa]           = useState(whatsappNumero ?? '')
+  const [savingWa, setSavingWa] = useState(false)
+  const [waMsg, setWaMsg]     = useState('')
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -430,44 +508,108 @@ function AlertasTab({
     setSaving(false)
   }
 
-  return (
-    <div>
-      <form onSubmit={handleAdd} className="flex gap-2 mb-5">
-        <input
-          value={texto} onChange={e => setTexto(e.target.value)}
-          placeholder="Ej: CAS Enfermero Lima"
-          className="flex-1 px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-peru-red/30"
-        />
-        <button
-          type="submit" disabled={saving || !texto.trim()}
-          className="px-4 py-2.5 bg-peru-red hover:bg-peru-dark disabled:opacity-50 text-white font-semibold text-sm rounded-xl transition-colors"
-        >
-          {saving ? <i className="fas fa-spinner fa-spin" /> : <i className="fas fa-plus" />}
-        </button>
-      </form>
+  const handleSaveWa = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSavingWa(true)
+    const res = await registrarWhatsapp(wa)
+    setSavingWa(false)
+    setWaMsg(res.error ?? '¡Número guardado!')
+    setTimeout(() => setWaMsg(''), 3000)
+  }
 
-      {items.length === 0 ? (
-        <EmptyState icon="fa-bell" text="No tienes alertas configuradas. Crea una para recibir notificaciones." />
-      ) : (
-        <ul className="space-y-2">
-          {items.map(a => (
-            <li key={a.id} className="flex items-center justify-between gap-2 bg-gray-50 rounded-xl px-4 py-3">
-              <div>
-                <p className="text-sm font-medium text-gray-800">{a.texto}</p>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  {new Date(a.created_at).toLocaleDateString('es-PE')}
-                </p>
-              </div>
-              <button
-                onClick={() => onRemove(a.id)}
-                className="w-7 h-7 rounded-lg bg-white border border-gray-200 hover:bg-red-50 hover:border-red-200 flex items-center justify-center transition-colors shrink-0"
-              >
-                <i className="fas fa-times text-gray-400 text-xs" />
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+  return (
+    <div className="space-y-5">
+
+      {/* Alertas por WhatsApp — PREMIUM */}
+      <div className={`rounded-xl border p-4 ${esPremium ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50'}`}>
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
+            <i className="fab fa-whatsapp text-green-500" />
+            Alerta por WhatsApp
+          </p>
+          {!esPremium && (
+            <button
+              onClick={onUpgrade}
+              className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full hover:bg-amber-200 transition-colors"
+            >
+              <i className="fas fa-crown mr-0.5" /> PREMIUM
+            </button>
+          )}
+        </div>
+
+        {esPremium ? (
+          <form onSubmit={handleSaveWa} className="flex gap-2">
+            <input
+              value={wa} onChange={e => setWa(e.target.value)}
+              placeholder="9XX XXX XXX (Perú)"
+              className="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-green-400/30"
+            />
+            <button
+              type="submit" disabled={savingWa || !wa.trim()}
+              className="px-3 py-2 bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white font-semibold text-sm rounded-xl transition-colors"
+            >
+              {savingWa ? <i className="fas fa-spinner fa-spin" /> : <i className="fas fa-check" />}
+            </button>
+          </form>
+        ) : (
+          <button
+            onClick={onUpgrade}
+            className="w-full text-xs text-gray-500 hover:text-peru-red transition-colors"
+          >
+            Activa Premium para recibir alertas instantáneas en WhatsApp →
+          </button>
+        )}
+
+        {waMsg && (
+          <p className={`text-xs mt-2 ${waMsg.includes('!') ? 'text-green-700' : 'text-red-500'}`}>
+            {waMsg}
+          </p>
+        )}
+      </div>
+
+      {/* Alertas de texto (libres, gratuitas con delay) */}
+      <div>
+        <p className="text-xs font-semibold text-gray-600 mb-2">
+          Alertas por correo
+          {!esPremium && <span className="text-gray-400 font-normal ml-1">(con 24h de retraso)</span>}
+        </p>
+        <form onSubmit={handleAdd} className="flex gap-2 mb-4">
+          <input
+            value={texto} onChange={e => setTexto(e.target.value)}
+            placeholder="Ej: CAS Enfermero Lima"
+            className="flex-1 px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-peru-red/30"
+          />
+          <button
+            type="submit" disabled={saving || !texto.trim()}
+            className="px-4 py-2.5 bg-peru-red hover:bg-peru-dark disabled:opacity-50 text-white font-semibold text-sm rounded-xl transition-colors"
+          >
+            {saving ? <i className="fas fa-spinner fa-spin" /> : <i className="fas fa-plus" />}
+          </button>
+        </form>
+
+        {items.length === 0 ? (
+          <EmptyState icon="fa-bell" text="No tienes alertas configuradas." />
+        ) : (
+          <ul className="space-y-2">
+            {items.map(a => (
+              <li key={a.id} className="flex items-center justify-between gap-2 bg-gray-50 rounded-xl px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium text-gray-800">{a.texto}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {new Date(a.created_at).toLocaleDateString('es-PE')}
+                  </p>
+                </div>
+                <button
+                  onClick={() => onRemove(a.id)}
+                  className="w-7 h-7 rounded-lg bg-white border border-gray-200 hover:bg-red-50 hover:border-red-200 flex items-center justify-center transition-colors shrink-0"
+                >
+                  <i className="fas fa-times text-gray-400 text-xs" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   )
 }
@@ -486,9 +628,7 @@ function EmptyState({ icon, text }: { icon: string; text: string }) {
 function TabSkeleton() {
   return (
     <div className="animate-pulse space-y-3">
-      {[1, 2, 3].map(i => (
-        <div key={i} className="h-20 bg-gray-100 rounded-xl" />
-      ))}
+      {[1, 2, 3].map(i => <div key={i} className="h-20 bg-gray-100 rounded-xl" />)}
     </div>
   )
 }
