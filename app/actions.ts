@@ -320,10 +320,19 @@ export async function deleteConvocatoria(id: number): Promise<void> {
 // ── Auth helpers ─────────────────────────────────────────────────────────────
 
 export async function checkEmailExists(email: string): Promise<boolean> {
-  const { createAdminClient } = await import('@/lib/supabase/admin')
-  const admin = createAdminClient()
-  const { data } = await admin.auth.admin.listUsers()
-  return (data?.users ?? []).some(u => u.email?.toLowerCase() === email.toLowerCase())
+  try {
+    const { createAdminClient } = await import('@/lib/supabase/admin')
+    const admin = createAdminClient()
+    const { data } = await admin
+      .schema('auth')
+      .from('users')
+      .select('id')
+      .ilike('email', email.trim())
+      .maybeSingle()
+    return !!data
+  } catch {
+    return false
+  }
 }
 
 // ── Freemium ──────────────────────────────────────────────────────────────────
