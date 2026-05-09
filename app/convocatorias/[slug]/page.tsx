@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { getConvocatoriaBySlug, getAllActiveSlugs } from '@/app/actions'
-import { BASE_URL, EMPLOYMENT_TYPE, formatDateISO, slugifyEntidad } from '@/lib/seo'
+import { BASE_URL, EMPLOYMENT_TYPE, formatDateISO, slugifyEntidad, POSTAL_CODES } from '@/lib/seo'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -68,6 +68,9 @@ export default async function ConvocatoriaPage({ params }: Props) {
   const isInactiva = c.estado === 'inactiva'
   const isGeneric  = !!(c.funciones?.[0]?.includes('según perfil'))
 
+  const ubicRegion = c.ubicacion.includes(' - ') ? c.ubicacion.split(' - ')[0] : c.ubicacion
+  const ubicCiudad = c.ubicacion.includes(' - ') ? c.ubicacion.split(' - ')[1] : c.ubicacion
+
   const jsonLd = isInactiva ? null : {
     '@context': 'https://schema.org',
     '@type': 'JobPosting',
@@ -82,8 +85,9 @@ export default async function ConvocatoriaPage({ params }: Props) {
       address: {
         '@type': 'PostalAddress',
         streetAddress: entidad,
-        addressLocality: c.ubicacion.includes(' - ') ? c.ubicacion.split(' - ')[1] : c.ubicacion,
-        addressRegion: c.ubicacion.includes(' - ') ? c.ubicacion.split(' - ')[0] : c.ubicacion,
+        addressLocality: ubicCiudad,
+        addressRegion: ubicRegion,
+        postalCode: POSTAL_CODES[ubicRegion] ?? '15001',
         addressCountry: 'PE',
       },
     },

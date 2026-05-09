@@ -12,7 +12,7 @@ const ITEMS_PER_PAGE = 12
 interface PageProps {
   searchParams: Promise<{
     q?: string
-    ubicacion?: string
+    departamento?: string
     entidad?: string
     contrato?: string
     salario?: string
@@ -53,7 +53,9 @@ const getCachedFilterOptions = unstable_cache(
     console.timeEnd('[cache] filter-options-build')
 
     return {
-      ubicaciones:    [...new Set(ubicData?.map(r => r.ubicacion) ?? [])].sort(),
+      departamentos: [...new Set(
+        ubicData?.map(r => r.ubicacion.includes(' - ') ? r.ubicacion.split(' - ')[0] : r.ubicacion) ?? []
+      )].sort(),
       entidades:      entData?.map(r => r.nombre_oficial) ?? [],
       contratos:      [...new Set(contratoData?.map(r => r.tipo_contrato) ?? [])].sort(),
       totalEntidades: totalEntidades ?? 0,
@@ -87,7 +89,7 @@ export default async function HomePage({ searchParams }: PageProps) {
 
   // All filtering delegated 100% to PostgreSQL — no .filter() / .sort() in JS
   if (sp.q)         query = query.ilike('titulo', `%${sp.q}%`)
-  if (sp.ubicacion) query = query.eq('ubicacion', sp.ubicacion)
+  if (sp.departamento) query = query.ilike('ubicacion', `${sp.departamento} - %`)
   if (sp.contrato)  query = query.eq('tipo_contrato', sp.contrato)
   if (sp.nivel)     query = query.contains('nivel', [sp.nivel])
   if (sp.salario) {
@@ -144,8 +146,8 @@ export default async function HomePage({ searchParams }: PageProps) {
   // ── Step 4: Post-processing ───────────────────────────────────────────────
   // Only arithmetic — no array iteration over convocatorias.
   console.time('[step4] data-processing')
-  const { ubicaciones, entidades, contratos, totalEntidades } = filterOptions
-  const totalUbicaciones = ubicaciones.length
+  const { departamentos, entidades, contratos, totalEntidades } = filterOptions
+  const totalUbicaciones = departamentos.length
   const totalPages       = Math.ceil((count ?? 0) / ITEMS_PER_PAGE)
   console.timeEnd('[step4] data-processing')
 
@@ -163,12 +165,12 @@ export default async function HomePage({ searchParams }: PageProps) {
       <section id="convocatorias" className="py-12 bg-white border-b border-gray-100">
         <Suspense>
           <Filters
-            ubicaciones={ubicaciones}
+            departamentos={departamentos}
             entidades={entidades}
             contratos={contratos}
             currentFilters={{
-              q: sp.q, ubicacion: sp.ubicacion, entidad: sp.entidad,
-              contrato: sp.contrato, salario: sp.salario,
+              q: sp.q, departamento: sp.departamento,
+              entidad: sp.entidad, contrato: sp.contrato, salario: sp.salario,
               nivel: sp.nivel, fecha: sp.fecha, orden: sp.orden,
             }}
           />

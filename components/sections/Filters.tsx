@@ -3,11 +3,11 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useCallback } from 'react'
 
 interface FiltersProps {
-  ubicaciones: string[]
+  departamentos: string[]
   entidades: string[]
   contratos: string[]
   currentFilters: {
-    q?: string; ubicacion?: string; entidad?: string; contrato?: string
+    q?: string; departamento?: string; entidad?: string; contrato?: string
     salario?: string; nivel?: string; fecha?: string; orden?: string
   }
 }
@@ -15,7 +15,7 @@ interface FiltersProps {
 const NIVELES = ['Técnico', 'Universitario', 'Maestría']
 const SEL = 'filter-select w-full px-3 py-2.5 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-peru-red/30 text-gray-700'
 
-export default function Filters({ ubicaciones, entidades, contratos, currentFilters }: FiltersProps) {
+export default function Filters({ departamentos, entidades, contratos, currentFilters }: FiltersProps) {
   const router   = useRouter()
   const pathname = usePathname()
   const params   = useSearchParams()
@@ -30,11 +30,11 @@ export default function Filters({ ubicaciones, entidades, contratos, currentFilt
   const clear = () => router.push(pathname, { scroll: false })
 
   const activeFilters: { label: string; key: string }[] = []
-  if (currentFilters.ubicacion) activeFilters.push({ label: currentFilters.ubicacion, key: 'ubicacion' })
-  if (currentFilters.entidad)   activeFilters.push({ label: currentFilters.entidad, key: 'entidad' })
-  if (currentFilters.contrato)  activeFilters.push({ label: currentFilters.contrato, key: 'contrato' })
-  if (currentFilters.nivel)     activeFilters.push({ label: currentFilters.nivel, key: 'nivel' })
-  if (currentFilters.fecha)     activeFilters.push({ label: `Últimos ${currentFilters.fecha} días`, key: 'fecha' })
+  if (currentFilters.departamento) activeFilters.push({ label: currentFilters.departamento, key: 'departamento' })
+  if (currentFilters.entidad)      activeFilters.push({ label: currentFilters.entidad, key: 'entidad' })
+  if (currentFilters.contrato)     activeFilters.push({ label: currentFilters.contrato, key: 'contrato' })
+  if (currentFilters.nivel)        activeFilters.push({ label: currentFilters.nivel, key: 'nivel' })
+  if (currentFilters.fecha)        activeFilters.push({ label: `Últimos ${currentFilters.fecha} días`, key: 'fecha' })
   if (currentFilters.salario) {
     const label = currentFilters.salario === '8000+'
       ? 'Desde S/ 8,000'
@@ -52,9 +52,9 @@ export default function Filters({ ubicaciones, entidades, contratos, currentFilt
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <select value={currentFilters.ubicacion ?? ''} onChange={e => update('ubicacion', e.target.value)} className={SEL}>
-          <option value="">Ubicación</option>
-          {ubicaciones.map(u => <option key={u} value={u}>{u}</option>)}
+        <select value={currentFilters.departamento ?? ''} onChange={e => update('departamento', e.target.value)} className={SEL}>
+          <option value="">Departamento</option>
+          {departamentos.map(d => <option key={d} value={d}>{d}</option>)}
         </select>
 
         <select value={currentFilters.entidad ?? ''} onChange={e => update('entidad', e.target.value)} className={SEL}>
