@@ -1,0 +1,504 @@
+[
+    {
+        "id": 1,
+        "titulo": "Secretaria Dgi",
+        "entidad": "Unidad Ejecutora 300 - Educacion Chiclayo",
+        "ubicacion": "Lambayeque - Chiclayo",
+        "sueldo": 2114,
+        "fechaPub": "2026-04-27",
+        "fechaLimite": "2026-05-11",
+        "nroConvocatoria": "D.LEG 1057 - DETERMINADO (NECESIDAD TRANSITORIA)-009",
+        "tipoContrato": "CAS",
+        "numero_folio": "781184",
+        "nivel": [
+            "No especificado"
+        ],
+        "descripcion": "Convocatoria CAS para Secretaria Dgi en Unidad Ejecutora 300 - Educacion Chiclayo, sede Lambayeque - Chiclayo. Remuneración mensual S/ 2114. 1 vacante(s). Fecha límite: 11 de mayo de 2026.",
+        "requisitos": [
+            "Según Bases Que Serán Publicadas En El Portal Institucional",
+            "Especialización en Según Bases Que Serán Publicadas En El Portal Institucional"
+        ],
+        "requerimientos": {
+            "experiencia": "Según bases que serán publicadas en el portal institucional",
+            "competencias": [
+                "Según Bases Que Serán Publicadas En El Portal Institucional"
+            ],
+            "conocimientos": "Según bases que serán publicadas en el portal institucional",
+            "especializacion": "Según bases que serán publicadas en el portal institucional",
+            "formacion": "Según bases que serán publicadas en el portal institucional"
+        },
+        "funciones": [
+            "Funciones no especificadas en la convocatoria extraída"
+        ],
+        "documentos": [
+            "Curriculum vitae",
+            "Certificados de experiencia"
+        ],
+        "linkOficial": "https://www.gob.pe/ugelchiclayo",
+        "modalidad": "Presencial"
+    },
+    {
+        "id": 2,
+        "titulo": "Médico Especialista - Ginecología Y Obstetricia",
+        "entidad": "Seguro Social De Salud",
+        "ubicacion": "Piura - Piura",
+        "sueldo": 8902,
+        "fechaPub": "2026-04-27",
+        "fechaLimite": "2026-05-11",
+        "nroConvocatoria": "728-008",
+        "tipoContrato": "728",
+        "numero_folio": "780974",
+        "nivel": [
+            "Universitario"
+        ],
+        "descripcion": "Convocatoria 728 para Médico Especialista - Ginecología Y Obstetricia en Seguro Social De Salud, sede Piura - Piura. Remuneración mensual S/ 8902. 1 vacante(s). Fecha límite: 11 de mayo de 2026.",
+        "requisitos": [
+            "Acreditar Copia Simple Del Título Profesional Universitario De Médico Cirujano Y Resolución De Serums (Indispensable)",
+            "Acreditar Copia Simple Del Diploma De Colegiatura Y Habilidad Profesional Vigente A La Fecha De Inscripción (Indispensable)",
+            "Acreditar Copia Simple Del Título De Médico Especialista En Pediatría (Indispensable)",
+            "Acreditar Copia Simple Del Registro Nacional De Especialista En Pediatría (Indispensable)",
+            "Acreditar Experiencia Laboral Mínima De Dos (02) Años, Ya Sea En El Sector Público O Privado (Indispensable)",
+            "Acreditar Experiencia Laboral Mínima De Un (01) Año En El Desempeño De Funciones A La Profesión Con Posterioridad A La Emisión Del Título Y Resolución De Serums (Indispensable)",
+            "A) Conocimientos Técnicos (No Requiere Documentación Sustentatoria)",
+            "De Preferencia, Contar Con Conocimientos En Ética En La Gestión Pública Ley N° 27815 Y En Salud Pública (Deseable)",
+            "De Preferencia, Contar Con Conocimientos En Salud Pública",
+            "(Deseable)",
+            "B) Cursos Y Programas De Especialización",
+            "Acreditar Capacitación Y/O Actividades De Actualización Profesional Afines A La Especialidad Requerida, Como Mínimo De 30 Horas, Realizadas A Partir Del Año 2021 A La Fecha (Indispensable)",
+            "C) Ofimática U Otros (Requisito Que Será Validado En El Formato 01: Declaración Jurada De Cumplimiento De Requisitos)",
+            "Manejo De Ofimática: Word, Excel, Power Point, Internet A Nivel Básico (Indispensable)",
+            "Genéricas: Vocación De Servicio, Ética E Integridad, Compromiso Y Responsabilidad, Orientación A Resultados Y Trabajo En Equipo",
+            "Específicas: Pensamiento Estratégico, Comunicación Efectiva, Planificación Y Organización, Capacidad De Análisis, Capacidad De Respuesta Al Cambio",
+            "Especialización en Ginecologia Y Obstetricia"
+        ],
+        "requerimientos": {
+            "experiencia": [
+                "Experiencia general:",
+                "Acreditar experiencia laboral mínima de dos (02) años, ya sea en el sector público o privado (indispensable). experiencia especifica:",
+                "Acreditar experiencia laboral mínima de un (01) año en el desempeño de funciones a la profesión con posterioridad a la emisión del título y resolución de serums (indispensable)"
+            ],
+            "competencias": [
+                "Genéricas: Vocación De Servicio Ética E Integridad Compromiso Y Responsabilidad Orientación A Resultados Y Trabajo En Equipo",
+                "Específicas: Pensamiento Estratégico Comunicación Efectiva Planificación Y Organización Capacidad De Análisis Capacidad De Respuesta Al Cambio"
+            ],
+            "conocimientos": [
+                "A) conocimientos técnicos (no requiere documentación sustentatoria)",
+                "De preferencia, contar con conocimientos en ética en la gestión pública ley n° 27815 y en salud pública (deseable).",
+                "De preferencia, contar con conocimientos en salud pública. (deseable). b) cursos y programas de especialización",
+                "Acreditar capacitación y/o actividades de actualización profesional afines a la especialidad requerida, como mínimo de 30 horas, realizadas a partir del año 2021 a la fecha (indispensable). c) ofimática u otros (requisito que será validado en el formato 01: declaración jurada de cumplimiento de requisitos)",
+                "Manejo de ofimática: word, excel, power point, internet a nivel básico (indispensable)"
+            ],
+            "especializacion": "Ginecologia y obstetricia",
+            "formacion": [
+                "Acreditar copia simple del título profesional universitario de médico cirujano y resolución de serums (indispensable).",
+                "Acreditar copia simple del diploma de colegiatura y habilidad profesional vigente a la fecha de inscripción (indispensable).",
+                "Acreditar copia simple del título de médico especialista en pediatría (indispensable).",
+                "Acreditar copia simple del registro nacional de especialista en pediatría (indispensable)"
+            ]
+        },
+        "funciones": [
+            "Funciones no especificadas en la convocatoria extraída"
+        ],
+        "documentos": [
+            "Curriculum vitae",
+            "Certificados de experiencia",
+            "Título profesional",
+            "Colegiatura y habilitación"
+        ],
+        "linkOficial": "https://convocatorias.essalud.gob.pe/convocatorias/page_external.php",
+        "modalidad": "Presencial"
+    },
+    {
+        "id": 3,
+        "titulo": "Trabajador De Servicios Generales",
+        "entidad": "Unidad Ejecutora 300 - Educacion Chiclayo",
+        "ubicacion": "Lambayeque - Chiclayo",
+        "sueldo": 1864,
+        "fechaPub": "2026-04-27",
+        "fechaLimite": "2026-05-11",
+        "nroConvocatoria": "D.LEG 1057 - DETERMINADO (NECESIDAD TRANSITORIA)-013",
+        "tipoContrato": "CAS",
+        "numero_folio": "781188",
+        "nivel": [
+            "No especificado"
+        ],
+        "descripcion": "Convocatoria CAS para Trabajador De Servicios Generales en Unidad Ejecutora 300 - Educacion Chiclayo, sede Lambayeque - Chiclayo. Remuneración mensual S/ 1864. 1 vacante(s). Fecha límite: 11 de mayo de 2026.",
+        "requisitos": [
+            "Según Bases Que Serán Publicadas En El Portal Institucional",
+            "Especialización en Según Bases Que Serán Publicadas En El Portal Institucional"
+        ],
+        "requerimientos": {
+            "experiencia": "Según bases que serán publicadas en el portal institucional",
+            "competencias": [
+                "Según Bases Que Serán Publicadas En El Portal Institucional"
+            ],
+            "conocimientos": "Según bases que serán publicadas en el portal institucional",
+            "especializacion": "Según bases que serán publicadas en el portal institucional",
+            "formacion": "Según bases que serán publicadas en el portal institucional"
+        },
+        "funciones": [
+            "Funciones no especificadas en la convocatoria extraída"
+        ],
+        "documentos": [
+            "Curriculum vitae",
+            "Certificados de experiencia"
+        ],
+        "linkOficial": "https://www.gob.pe/ugelchiclayo",
+        "modalidad": "Presencial"
+    },
+    {
+        "id": 4,
+        "titulo": "Personal De Limpieza",
+        "entidad": "Unidad Ejecutora 300 - Educacion Chiclayo",
+        "ubicacion": "Lambayeque - Chiclayo",
+        "sueldo": 1389,
+        "fechaPub": "2026-04-27",
+        "fechaLimite": "2026-05-11",
+        "nroConvocatoria": "D.LEG 1057 - DETERMINADO (NECESIDAD TRANSITORIA)-010",
+        "tipoContrato": "CAS",
+        "numero_folio": "781185",
+        "nivel": [
+            "No especificado"
+        ],
+        "descripcion": "Convocatoria CAS para Personal De Limpieza en Unidad Ejecutora 300 - Educacion Chiclayo, sede Lambayeque - Chiclayo. Remuneración mensual S/ 1389. 1 vacante(s). Fecha límite: 11 de mayo de 2026.",
+        "requisitos": [
+            "Según Bases Que Serán Publicadas En El Portal Institucional",
+            "Especialización en Según Bases Que Serán Publicadas En El Portal Institucional"
+        ],
+        "requerimientos": {
+            "experiencia": "Según bases que serán publicadas en el portal institucional",
+            "competencias": [
+                "Según Bases Que Serán Publicadas En El Portal Institucional"
+            ],
+            "conocimientos": "Según bases que serán publicadas en el portal institucional",
+            "especializacion": "Según bases que serán publicadas en el portal institucional",
+            "formacion": "Según bases que serán publicadas en el portal institucional"
+        },
+        "funciones": [
+            "Funciones no especificadas en la convocatoria extraída"
+        ],
+        "documentos": [
+            "Curriculum vitae",
+            "Certificados de experiencia"
+        ],
+        "linkOficial": "https://www.gob.pe/ugelchiclayo",
+        "modalidad": "Presencial"
+    },
+    {
+        "id": 5,
+        "titulo": "Convivencia Escolar",
+        "entidad": "Unidad Ejecutora 300 - Educacion Chiclayo",
+        "ubicacion": "Lambayeque - Chiclayo",
+        "sueldo": 3864,
+        "fechaPub": "2026-04-27",
+        "fechaLimite": "2026-05-11",
+        "nroConvocatoria": "D.LEG 1057 - DETERMINADO (NECESIDAD TRANSITORIA)-011",
+        "tipoContrato": "CAS",
+        "numero_folio": "781186",
+        "nivel": [
+            "No especificado"
+        ],
+        "descripcion": "Convocatoria CAS para Convivencia Escolar en Unidad Ejecutora 300 - Educacion Chiclayo, sede Lambayeque - Chiclayo. Remuneración mensual S/ 3864. 1 vacante(s). Fecha límite: 11 de mayo de 2026.",
+        "requisitos": [
+            "Según Bases Que Serán Publicadas En El Portal Institucional",
+            "Especialización en Según Bases Que Serán Publicadas En El Portal Institucional"
+        ],
+        "requerimientos": {
+            "experiencia": "Según bases que serán publicadas en el portal institucional",
+            "competencias": [
+                "Según Bases Que Serán Publicadas En El Portal Institucional"
+            ],
+            "conocimientos": "Según bases que serán publicadas en el portal institucional",
+            "especializacion": "Según bases que serán publicadas en el portal institucional",
+            "formacion": "Según bases que serán publicadas en el portal institucional"
+        },
+        "funciones": [
+            "Funciones no especificadas en la convocatoria extraída"
+        ],
+        "documentos": [
+            "Curriculum vitae",
+            "Certificados de experiencia"
+        ],
+        "linkOficial": "https://www.gob.pe/ugelchiclayo",
+        "modalidad": "Presencial"
+    },
+    {
+        "id": 6,
+        "titulo": "Médico Especialista - Cirugía De Tórax Y Cardiovascular",
+        "entidad": "Seguro Social De Salud",
+        "ubicacion": "Piura - Piura",
+        "sueldo": 8902,
+        "fechaPub": "2026-04-27",
+        "fechaLimite": "2026-05-11",
+        "nroConvocatoria": "728-008",
+        "tipoContrato": "728",
+        "numero_folio": "780977",
+        "nivel": [
+            "Universitario"
+        ],
+        "descripcion": "Convocatoria 728 para Médico Especialista - Cirugía De Tórax Y Cardiovascular en Seguro Social De Salud, sede Piura - Piura. Remuneración mensual S/ 8902. 1 vacante(s). Fecha límite: 11 de mayo de 2026.",
+        "requisitos": [
+            "Acreditar Copia Simple Del Título Profesional Universitario De Médico Cirujano Y Resolución De Serums (Indispensable)",
+            "Acreditar Copia Simple Del Diploma De Colegiatura Y Habilidad Profesional Vigente A La Fecha De Inscripción (Indispensable)",
+            "Acreditar Copia Simple Del Título De Médico Especialista En Cirugía De Tórax Y Cardiovascular (Indispensable)",
+            "Acreditar Copia Simple Del Registro Nacional De Especialista En Cirugía De Tórax Y Cardiovascular (Indispensable)",
+            "Acreditar Experiencia Laboral Mínima De Dos (02) Años, Ya Sea En El Sector Público O Privado (Indispensable)",
+            "Acreditar Experiencia Laboral Mínima De Un (01) Año En El Desempeño De Funciones A La Profesión Con Posterioridad A La Emisión Del Título Y Resolución De Serums (Indispensable)",
+            "A) Conocimientos Técnicos (No Requiere Documentación Sustentatoria)",
+            "De Preferencia, Contar Con Conocimientos En Ética En La Gestión Pública Ley N° 27815 Y En Salud Pública (Deseable)",
+            "De Preferencia, Contar Con Conocimientos En Salud Pública",
+            "(Deseable)",
+            "B) Cursos Y Programas De Especialización",
+            "Acreditar Capacitación Y/O Actividades De Actualización Profesional Afines A La Especialidad Requerida, Como Mínimo De 30 Horas, Realizadas A Partir Del Año 2021 A La Fecha (Indispensable)",
+            "C) Ofimática U Otros (Requisito Que Será Validado En El Formato 01: Declaración Jurada De Cumplimiento De Requisitos)",
+            "Manejo De Ofimática: Word, Excel, Power Point, Internet A Nivel Básico (Indispensable)",
+            "Genéricas: Vocación De Servicio, Ética E Integridad, Compromiso Y Responsabilidad, Orientación A Resultados Y Trabajo En Equipo",
+            "Específicas: Pensamiento Estratégico, Comunicación Efectiva, Planificación Y Organización, Capacidad De Análisis, Capacidad De Respuesta Al Cambio",
+            "Especialización en Cirugía De Torax Y Cardiovascular"
+        ],
+        "requerimientos": {
+            "experiencia": [
+                "Experiencia general:",
+                "Acreditar experiencia laboral mínima de dos (02) años, ya sea en el sector público o privado (indispensable). experiencia especifica:",
+                "Acreditar experiencia laboral mínima de un (01) año en el desempeño de funciones a la profesión con posterioridad a la emisión del título y resolución de serums (indispensable)"
+            ],
+            "competencias": [
+                "Genéricas: Vocación De Servicio Ética E Integridad Compromiso Y Responsabilidad Orientación A Resultados Y Trabajo En Equipo",
+                "Específicas: Pensamiento Estratégico Comunicación Efectiva Planificación Y Organización Capacidad De Análisis Capacidad De Respuesta Al Cambio"
+            ],
+            "conocimientos": [
+                "A) conocimientos técnicos (no requiere documentación sustentatoria)",
+                "De preferencia, contar con conocimientos en ética en la gestión pública ley n° 27815 y en salud pública (deseable).",
+                "De preferencia, contar con conocimientos en salud pública. (deseable). b) cursos y programas de especialización",
+                "Acreditar capacitación y/o actividades de actualización profesional afines a la especialidad requerida, como mínimo de 30 horas, realizadas a partir del año 2021 a la fecha (indispensable). c) ofimática u otros (requisito que será validado en el formato 01: declaración jurada de cumplimiento de requisitos)",
+                "Manejo de ofimática: word, excel, power point, internet a nivel básico (indispensable)"
+            ],
+            "especializacion": "Cirugía de torax y cardiovascular",
+            "formacion": [
+                "Acreditar copia simple del título profesional universitario de médico cirujano y resolución de serums (indispensable).",
+                "Acreditar copia simple del diploma de colegiatura y habilidad profesional vigente a la fecha de inscripción (indispensable).",
+                "Acreditar copia simple del título de médico especialista en cirugía de tórax y cardiovascular (indispensable).",
+                "Acreditar copia simple del registro nacional de especialista en cirugía de tórax y cardiovascular (indispensable)"
+            ]
+        },
+        "funciones": [
+            "Funciones no especificadas en la convocatoria extraída"
+        ],
+        "documentos": [
+            "Curriculum vitae",
+            "Certificados de experiencia",
+            "Título profesional",
+            "Colegiatura y habilitación"
+        ],
+        "linkOficial": "https://convocatorias.essalud.gob.pe/convocatorias/page_external.php",
+        "modalidad": "Presencial"
+    },
+    {
+        "id": 7,
+        "titulo": "Médico Especialista - Medicina Interna",
+        "entidad": "Seguro Social De Salud",
+        "ubicacion": "Piura - Piura",
+        "sueldo": 8902,
+        "fechaPub": "2026-04-27",
+        "fechaLimite": "2026-05-11",
+        "nroConvocatoria": "728-008",
+        "tipoContrato": "728",
+        "numero_folio": "780970",
+        "nivel": [
+            "Universitario"
+        ],
+        "descripcion": "Convocatoria 728 para Médico Especialista - Medicina Interna en Seguro Social De Salud, sede Piura - Piura. Remuneración mensual S/ 8902. 1 vacante(s). Fecha límite: 11 de mayo de 2026.",
+        "requisitos": [
+            "Acreditar Copia Simple Del Título Profesional Universitario De Médico Cirujano Y Resolución De Serums",
+            "(Indispensable)",
+            "Acreditar Copia Simple Del Diploma De Colegiatura Y Habilidad Profesional Vigente A La Fecha De Inscripción",
+            "Acreditar Copia Simple Del Título De Médico Especialista En Medicina Interna",
+            "Acreditar Copia Simple Del Registro Nacional De Especialista En Medicina Interna (Indispensable)",
+            "Acreditar Experiencia Laboral Mínima De Dos (02) Años, Ya Sea En El Sector Público Y/O Privado",
+            "Acreditar Experiencia Laboral Mínima De Un (01) Año En El Desempeño De Funciones Afines A La Profesión, Con Posterioridad A La Emisión Del Título Profesional Y La Resolución De Serums",
+            "A) Conocimientos Técnicos (No Requiere Documentación Sustentatoria)",
+            "De Preferencia, Contar Con Conocimientos En Ética En La Gestión Pública Ley N° 27815 Y En Salud Pública",
+            "(Deseable)",
+            "De Preferencia, Contar Con Conocimientos En Salud Pública",
+            "B) Cursos Y Programas De Especialización",
+            "Acreditar Capacitación Y/O Actividades De Actualización Profesional Afines A La Especialidad Requerida, Como Mínimo De 30 Horas, Realizadas A Partir Del Año 2021 A La Fecha (Indispensable)",
+            "C) Ofimática U Otros (Requisito Que Será Validado En El Formato 01: Declaración Jurada De Cumplimiento De Requisitos)",
+            "Manejo De Ofimática: Word, Excel, Power Point, Internet A Nivel Básico (Indispensable)",
+            "Genericas: Vocación De Servicio, Ética E Integridad, Compromiso Y Responsabilidad, Orientación A Resultados Y Trabajo En Equipo",
+            "Especificas: Pensamiento Estratégico, Comunicación Efectiva, Planificación Y Organización, Capacidad De Análisis, Capacidad De Respuesta Al Cambio",
+            "Especialización en Medicina Interna"
+        ],
+        "requerimientos": {
+            "experiencia": [
+                "Experiencia general:",
+                "Acreditar experiencia laboral mínima de dos (02) años, ya sea en el sector público y/o privado. (indispensable) experiencia especifica:",
+                "Acreditar experiencia laboral mínima de un (01) año en el desempeño de funciones afines a la profesión, con posterioridad a la emisión del título profesional y la resolución de serums. (indispensable)"
+            ],
+            "competencias": [
+                "Genericas: Vocación De Servicio Ética E Integridad Compromiso Y Responsabilidad Orientación A Resultados Y Trabajo En Equipo",
+                "Especificas: Pensamiento Estratégico Comunicación Efectiva Planificación Y Organización Capacidad De Análisis Capacidad De Respuesta Al Cambio"
+            ],
+            "conocimientos": [
+                "A) conocimientos técnicos (no requiere documentación sustentatoria)",
+                "De preferencia, contar con conocimientos en ética en la gestión pública ley n° 27815 y en salud pública. (deseable).",
+                "De preferencia, contar con conocimientos en salud pública. (deseable). b) cursos y programas de especialización",
+                "Acreditar capacitación y/o actividades de actualización profesional afines a la especialidad requerida, como mínimo de 30 horas, realizadas a partir del año 2021 a la fecha (indispensable). c) ofimática u otros (requisito que será validado en el formato 01: declaración jurada de cumplimiento de requisitos)",
+                "Manejo de ofimática: word, excel, power point, internet a nivel básico (indispensable)"
+            ],
+            "especializacion": "Medicina interna",
+            "formacion": [
+                "Acreditar copia simple del título profesional universitario de médico cirujano y resolución de serums. (indispensable)",
+                "Acreditar copia simple del diploma de colegiatura y habilidad profesional vigente a la fecha de inscripción. (indispensable)",
+                "Acreditar copia simple del título de médico especialista en medicina interna. (indispensable)",
+                "Acreditar copia simple del registro nacional de especialista en medicina interna (indispensable)"
+            ]
+        },
+        "funciones": [
+            "Funciones no especificadas en la convocatoria extraída"
+        ],
+        "documentos": [
+            "Curriculum vitae",
+            "Certificados de experiencia",
+            "Título profesional",
+            "Colegiatura y habilitación"
+        ],
+        "linkOficial": "https://convocatorias.essalud.gob.pe/convocatorias/page_external.php",
+        "modalidad": "Presencial"
+    },
+    {
+        "id": 12,
+        "titulo": "Psicologo",
+        "entidad": "Oficina De Gestion De Servicios De Salud Bajo Mayo",
+        "ubicacion": "San Martin - Sauce",
+        "sueldo": 2794,
+        "fechaPub": "2026-04-27",
+        "fechaLimite": "2026-05-11",
+        "nroConvocatoria": "D.LEG 1057 - DETERMINADO (NECESIDAD TRANSITORIA)-002",
+        "tipoContrato": "CAS",
+        "numero_folio": "781089",
+        "nivel": [
+            "No especificado"
+        ],
+        "descripcion": "Convocatoria CAS para Psicologo en Oficina De Gestion De Servicios De Salud Bajo Mayo, sede San Martin - Sauce. Remuneración mensual S/ 2794. 1 vacante(s). Fecha límite: 11 de mayo de 2026.",
+        "requisitos": [
+            "Psicologo",
+            "Tres (03) Años",
+            "Conocimiento De La Ley N°30947",
+            "Ley De Salud Mental Y Su Reglamento",
+            "Conocimiento De La Ley N° 30364",
+            "Ley Para Prevenir, Sancionar Y Erradicar La Violencia Contra Las Mujeres Y Los Integrantes Del Grupo Familiar",
+            "Conocimiento De Vigilancia Epidemiologica",
+            "Conocimiento De Derechos De Las Personas Usuarias De Los Servicios De Salud",
+            "Trabajo En Equipo Comportamiento Ético Orientación De Servicio Al Ciudadano Comunicación Asertiva"
+        ],
+        "requerimientos": {
+            "experiencia": "Tres (03) años",
+            "competencias": [
+                "Trabajo En Equipo Comportamiento Ético Orientación De Servicio Al Ciudadano Comunicación Asertiva"
+            ],
+            "conocimientos": "Conocimiento de la ley n°30947 - ley de salud mental y su reglamento. conocimiento de la ley n° 30364 - ley para prevenir, sancionar y erradicar la violencia contra las mujeres y los integrantes del grupo familiar. conocimiento de vigilancia epidemiologica. conocimiento de derechos de las personas usuarias de los servicios de salud.",
+            "especializacion": null,
+            "formacion": "Psicologo"
+        },
+        "funciones": [
+            "Funciones no especificadas en la convocatoria extraída"
+        ],
+        "documentos": [
+            "Curriculum vitae",
+            "Certificados de experiencia"
+        ],
+        "linkOficial": "https://www.gob.pe/saludbajomayo",
+        "modalidad": "Presencial"
+    },
+    {
+        "id": 17,
+        "titulo": "Enfermera",
+        "entidad": "Oficina De Gestion De Servicios De Salud Bajo Mayo",
+        "ubicacion": "San Martin - Morales",
+        "sueldo": 3864,
+        "fechaPub": "2026-04-27",
+        "fechaLimite": "2026-05-11",
+        "nroConvocatoria": "D.LEG 1057 - DETERMINADO (NECESIDAD TRANSITORIA)-002",
+        "tipoContrato": "CAS",
+        "numero_folio": "781094",
+        "nivel": [
+            "No especificado"
+        ],
+        "descripcion": "Convocatoria CAS para Enfermera en Oficina De Gestion De Servicios De Salud Bajo Mayo, sede San Martin - Morales. Remuneración mensual S/ 3864. 1 vacante(s). Fecha límite: 11 de mayo de 2026.",
+        "requisitos": [
+            "Enfermera",
+            "Tres (03) Años",
+            "Conocimiento De La Ley N° 26842",
+            "Ley General De Salud Y Su Reglamento",
+            "Conocimiento De La Ley N° 27604",
+            "Ley Del Trabajo De La Enfermera(O) Y Normativas Relacionadas Al Ejercicio Profesional",
+            "Conocimientos Sobre Normativas Y Protocolos De Bioseguridad En Establecimientos De Salud",
+            "Conocimientos De Vigilancia Epidemiológica Y Control De Infecciones En El Ámbito Hospitalario Y Comunitario",
+            "Cconocimiento De Los Derechos De Las Personas Usuarias De Los Servicios De Salud Y Principios De Ética En La Atención De Enfermería",
+            "Trabajo En Equipo Comportamiento Ético Orientación De Servicio Al Ciudadano Comunicación Asertiva"
+        ],
+        "requerimientos": {
+            "experiencia": "Tres (03) años",
+            "competencias": [
+                "Trabajo En Equipo Comportamiento Ético Orientación De Servicio Al Ciudadano Comunicación Asertiva"
+            ],
+            "conocimientos": "Conocimiento de la ley n° 26842 - ley general de salud y su reglamento. conocimiento de la ley n° 27604 - ley del trabajo de la enfermera(o) y normativas relacionadas al ejercicio profesional. conocimientos sobre normativas y protocolos de bioseguridad en establecimientos de salud. conocimientos de vigilancia epidemiológica y control de infecciones en el ámbito hospitalario y comunitario. cconocimiento de los derechos de las personas usuarias de los servicios de salud y principios de ética en la atención de enfermería.",
+            "especializacion": null,
+            "formacion": "Enfermera"
+        },
+        "funciones": [
+            "Funciones no especificadas en la convocatoria extraída"
+        ],
+        "documentos": [
+            "Curriculum vitae",
+            "Certificados de experiencia"
+        ],
+        "linkOficial": "https://www.gob.pe/saludbajomayo",
+        "modalidad": "Presencial"
+    },
+    {
+        "id": 22,
+        "titulo": "Medico Cirujano",
+        "entidad": "Oficina De Gestion De Servicios De Salud Bajo Mayo",
+        "ubicacion": "San Martin - Tarapoto",
+        "sueldo": 5564,
+        "fechaPub": "2026-04-27",
+        "fechaLimite": "2026-05-11",
+        "nroConvocatoria": "D.LEG 1057 - DETERMINADO (NECESIDAD TRANSITORIA)-002",
+        "tipoContrato": "CAS",
+        "numero_folio": "781083",
+        "nivel": [
+            "Universitario"
+        ],
+        "descripcion": "Convocatoria CAS para Medico Cirujano en Oficina De Gestion De Servicios De Salud Bajo Mayo, sede San Martin - Tarapoto. Remuneración mensual S/ 5564. 1 vacante(s). Fecha límite: 11 de mayo de 2026.",
+        "requisitos": [
+            "Medico Cirujano",
+            "Tres (03) Años",
+            "Manejo De Urgencias Y Emergencias Modelo De Abordaje De Promoción De La Salud En El Perú Medidas De Bioseguridad",
+            "Entrevista Clínica Centrada En El Paciente Manejo De Patologías Frecuentes",
+            "Modelo De Cuidado Integral De Salud (Mci) Por Cursos De Vida",
+            "Guías De Practica Clínica De Las Patologías Del Minsa Mas Frecuentes",
+            "Trabajo En Equipo Comportamiento Ético Orientación De Servicio Al Ciudadano Comunicación Asertiva"
+        ],
+        "requerimientos": {
+            "experiencia": "Tres (03) años",
+            "competencias": [
+                "Trabajo En Equipo Comportamiento Ético Orientación De Servicio Al Ciudadano Comunicación Asertiva"
+            ],
+            "conocimientos": "Manejo de urgencias y emergencias modelo de abordaje de promoción de la salud en el perú medidas de bioseguridad. entrevista clínica centrada en el paciente manejo de patologías frecuentes. modelo de cuidado integral de salud (mci) por cursos de vida. guías de practica clínica de las patologías del minsa mas frecuentes.",
+            "especializacion": null,
+            "formacion": "Medico cirujano"
+        },
+        "funciones": [
+            "Funciones no especificadas en la convocatoria extraída"
+        ],
+        "documentos": [
+            "Curriculum vitae",
+            "Certificados de experiencia",
+            "Título profesional",
+            "Colegiatura y habilitación"
+        ],
+        "linkOficial": "https://www.gob.pe/saludbajomayo",
+        "modalidad": "Presencial"
+    }
+  ]

@@ -81,7 +81,9 @@ export default async function ConvocatoriaPage({ params }: Props) {
       '@type': 'Place',
       address: {
         '@type': 'PostalAddress',
-        addressLocality: c.ubicacion,
+        streetAddress: entidad,
+        addressLocality: c.ubicacion.includes(' - ') ? c.ubicacion.split(' - ')[1] : c.ubicacion,
+        addressRegion: c.ubicacion.includes(' - ') ? c.ubicacion.split(' - ')[0] : c.ubicacion,
         addressCountry: 'PE',
       },
     },
