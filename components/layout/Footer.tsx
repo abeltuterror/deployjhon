@@ -38,7 +38,7 @@ export default function Footer() {
             <ul className="space-y-2 text-sm text-slate-400">
               <li>
                 <i className="fas fa-envelope mr-2 text-peru-red" />
-                contacto@convocatoriasperu.gob.pe
+                convocape.soporte@gmail.com
               </li>
               <li>
                 <i className="fas fa-phone mr-2 text-peru-red" />
