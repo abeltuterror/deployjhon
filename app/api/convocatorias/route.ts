@@ -18,7 +18,7 @@ const convocatoriaScraperSchema = z.object({
   nivel: z.array(z.string()).default([]),
   descripcion: z.string().default(''),
   requisitos: z.array(z.string()).default([]),
-  requerimientos: z.record(z.string(), z.string()).default({}),
+  requerimientos: z.record(z.string(), z.union([z.string(), z.array(z.string()), z.null()])).default({}),
   funciones: z.array(z.string()).default([]),
   documentos: z.array(z.string()).default([]),
   linkOficial: z.string().default(''),
@@ -103,7 +103,7 @@ interface DbConvocatoria {
   req_preview: string[]
   funciones: string[]
   documentos: string[]
-  requerimientos: Record<string, string>
+  requerimientos: Record<string, string | string[] | null>
   modalidad: string
   link_oficial: string
   estado: string
