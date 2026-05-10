@@ -79,7 +79,7 @@ export default async function ConvocatoriaPage({ params }: Props) {
     datePosted: formatDateISO(c.fecha_pub),
     validThrough: formatDateISO(c.fecha_limite),
     employmentType: EMPLOYMENT_TYPE[c.tipo_contrato] ?? 'OTHER',
-    ...(c.link_oficial && { directApply: true, url: c.link_oficial }),
+    ...(c.link_oficial && c.link_oficial !== '#' && { directApply: true, url: c.link_oficial }),
     jobLocation: {
       '@type': 'Place',
       address: {
@@ -241,7 +241,7 @@ export default async function ConvocatoriaPage({ params }: Props) {
         {/* CTA */}
         {!isInactiva && (
           <div className="mt-8 flex flex-col sm:flex-row gap-3">
-            {c.link_oficial ? (
+            {c.link_oficial && c.link_oficial !== '#' ? (
               <a
                 href={c.link_oficial}
                 target="_blank"
