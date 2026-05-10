@@ -11,6 +11,7 @@ import AdminPanel from '@/components/panels/AdminPanel'
 import RevealObserver from '@/components/shared/RevealObserver'
 import CookieBanner from '@/components/shared/CookieBanner'
 import GoogleAnalytics from '@/components/shared/GoogleAnalytics'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 import { BASE_URL } from '@/lib/seo'
 
 const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID
@@ -56,6 +57,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </AuthProvider>
 
         {GA_ID && <GoogleAnalytics gaId={GA_ID} />}
+        <SpeedInsights />
         <CookieBanner />
       </body>
     </html>
