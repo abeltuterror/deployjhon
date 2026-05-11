@@ -28,13 +28,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!entidad) return { title: 'Entidad no encontrada | Convocape' }
 
   const year = new Date().getFullYear()
-  return {
+  const convocatorias = await getConvocatoriasByEntidad(entidad.id)
+
+  const baseMetadata: Metadata = {
     title: `Convocatorias ${entidad.nombre_oficial} ${year} | Trabajo en ${entidad.nombre_oficial} | Convocape`,
     description: `Últimas convocatorias de trabajo en ${entidad.nombre_oficial}. Ofertas CAS, 728 y 276. Actualizado diariamente.`,
     alternates: {
       canonical: `${BASE_URL}/entidades/${slug}`,
     },
   }
+
+  if (convocatorias.length === 0) {
+    return { ...baseMetadata, robots: { index: false, follow: true } }
+  }
+
+  return baseMetadata
 }
 
 export default async function EntidadPage({ params }: Props) {
