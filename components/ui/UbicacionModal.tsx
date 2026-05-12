@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef, useEffect } from 'react'
+import { useState } from 'react'
 
 interface UbicacionCount { provincia: string; ciudad: string; total: number }
 
@@ -15,16 +15,6 @@ interface Props {
 export default function UbicacionModal({ counts, departamentos, provincia, ciudad, onApply, onClose }: Props) {
   const [selProvincia, setSelProvincia] = useState(provincia)
   const [selCiudad,    setSelCiudad]    = useState(ciudad)
-  const ref = useRef<HTMLDivElement>(null)
-
-  // Cerrar al click fuera
-  useEffect(() => {
-    function handler(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose()
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [onClose])
 
   // Conteos por provincia
   const provinciaMap = counts.reduce<Record<string, number>>((acc, r) => {
@@ -63,7 +53,6 @@ export default function UbicacionModal({ counts, departamentos, provincia, ciuda
 
   return (
     <div
-      ref={ref}
       className="absolute top-full left-0 mt-1 z-50 bg-white rounded-2xl shadow-2xl border border-gray-100 w-[480px] max-w-[95vw]"
       role="dialog"
       aria-label="Filtro de ubicación"

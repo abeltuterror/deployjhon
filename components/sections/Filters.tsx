@@ -49,7 +49,7 @@ export default function Filters({ departamentos, entidades, contratos, ubicacion
   // Label del botón ubicación
   const ubicLabel = currentFilters.ciudad
     ? `${currentFilters.departamento} · ${currentFilters.ciudad}`
-    : currentFilters.departamento ?? 'Ubicación'
+    : currentFilters.departamento ?? 'Lugar de trabajo'
 
   const activeFilters: { label: string; keys: string[] }[] = []
   if (currentFilters.departamento || currentFilters.ciudad) {
@@ -87,8 +87,9 @@ export default function Filters({ departamentos, entidades, contratos, ubicacion
         {/* Ubicación — botón que abre modal */}
         <div className="relative">
           <button
-            onClick={() => setUbicModalOpen(true)}
-            className={`w-full px-3 py-2.5 rounded-lg border text-sm text-left flex items-center justify-between gap-2 transition-colors ${
+            type="button"
+            onClick={() => setUbicModalOpen(prev => !prev)}
+            className={`relative z-50 w-full px-3 py-2.5 rounded-lg border text-sm text-left flex items-center justify-between gap-2 transition-colors ${
               currentFilters.departamento || currentFilters.ciudad
                 ? 'border-peru-red bg-peru-light text-peru-red font-medium'
                 : 'border-gray-200 bg-white text-gray-700'
@@ -98,6 +99,9 @@ export default function Filters({ departamentos, entidades, contratos, ubicacion
             <i className="fas fa-chevron-down text-xs shrink-0" />
           </button>
 
+          {ubicModalOpen && (
+            <div className="fixed inset-0 z-40" onClick={() => setUbicModalOpen(false)} />
+          )}
           {ubicModalOpen && (
             <UbicacionModal
               counts={ubicacionCounts}
