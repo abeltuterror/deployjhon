@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { z } from 'zod'
 
@@ -215,6 +216,9 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
+
+  revalidatePath('/')
+  revalidatePath('/sitemap.xml')
 
   return NextResponse.json(
     {

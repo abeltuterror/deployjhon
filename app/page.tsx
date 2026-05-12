@@ -7,6 +7,8 @@ import ConvocatoriasGrid from '@/components/sections/ConvocatoriasGrid'
 import Pagination from '@/components/shared/Pagination'
 import type { ConvocatoriaListItem } from '@/types/convocatoria'
 
+export const revalidate = 3600
+
 const ITEMS_PER_PAGE = 12
 
 interface PageProps {
