@@ -8,17 +8,13 @@ interface Props {
   departamentos: string[]
   provincia:    string
   ciudad:       string
-  modalidad:    string
-  onApply:      (provincia: string, ciudad: string, modalidad: string) => void
+  onApply:      (provincia: string, ciudad: string) => void
   onClose:      () => void
 }
 
-const MODALIDADES_NO_PRESENCIAL = ['Remota', 'Híbrida']
-
-export default function UbicacionModal({ counts, departamentos, provincia, ciudad, modalidad, onApply, onClose }: Props) {
+export default function UbicacionModal({ counts, departamentos, provincia, ciudad, onApply, onClose }: Props) {
   const [selProvincia, setSelProvincia] = useState(provincia)
   const [selCiudad,    setSelCiudad]    = useState(ciudad)
-  const [selModalidad, setSelModalidad] = useState(modalidad)
   const ref = useRef<HTMLDivElement>(null)
 
   // Cerrar al click fuera
@@ -46,24 +42,13 @@ export default function UbicacionModal({ counts, departamentos, provincia, ciuda
     .filter(r => r.provincia === selProvincia)
     .sort((a, b) => b.total - a.total)
 
-  // Conteos por modalidad
-  const modalidadMap = counts.reduce<Record<string, number>>((acc, r) => {
-    acc['total'] = (acc['total'] ?? 0) + Number(r.total)
-    return acc
-  }, {})
-
-  const toggleModalidad = (m: string) => {
-    setSelModalidad(prev => prev === m ? '' : m)
-  }
-
   const handleLimpiar = () => {
     setSelProvincia('')
     setSelCiudad('')
-    setSelModalidad('')
   }
 
   const handleFiltrar = () => {
-    onApply(selProvincia, selCiudad, selModalidad)
+    onApply(selProvincia, selCiudad)
   }
 
   const handleSelectProvincia = (p: string) => {
@@ -89,31 +74,6 @@ export default function UbicacionModal({ counts, departamentos, provincia, ciuda
         <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
           <i className="fas fa-times" />
         </button>
-      </div>
-
-      {/* Modalidad toggles */}
-      <div className="px-5 py-3 border-b border-gray-100 space-y-2">
-        {MODALIDADES_NO_PRESENCIAL.map(m => (
-          <label key={m} className="flex items-center justify-between cursor-pointer">
-            <div>
-              <span className="text-sm font-medium text-gray-700">{m}</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => toggleModalidad(m)}
-                className={`relative w-10 h-5 rounded-full transition-colors ${
-                  selModalidad === m ? 'bg-peru-red' : 'bg-gray-200'
-                }`}
-                role="switch"
-                aria-checked={selModalidad === m}
-              >
-                <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
-                  selModalidad === m ? 'translate-x-5' : 'translate-x-0.5'
-                }`} />
-              </button>
-            </div>
-          </label>
-        ))}
       </div>
 
       {/* Columnas Provincia + Ciudad */}
