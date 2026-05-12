@@ -15,6 +15,8 @@ interface PageProps {
   searchParams: Promise<{
     q?: string
     departamento?: string
+    ciudad?: string
+    modalidad?: string
     entidad?: string
     contrato?: string
     salario?: string
@@ -47,16 +49,19 @@ const getCachedFilterOptions = unstable_cache(
       { data: entData },
       { data: contratoData },
       { count: totalEntidades },
+      { data: ubicacionData },
     ] = await Promise.all([
       db.from('entidades').select('nombre_oficial, sinonimos').order('nombre_oficial'),
       db.from('convocatorias').select('tipo_contrato').eq('estado', 'activa'),
       db.from('entidades').select('id', { count: 'exact', head: true }),
+      db.rpc('get_ubicacion_counts'),
     ])
 
     return {
-      entidades:      entData?.map(r => ({ nombre: r.nombre_oficial, sinonimos: r.sinonimos ?? [] })) ?? [],
-      contratos:      [...new Set(contratoData?.map(r => r.tipo_contrato) ?? [])].sort(),
-      totalEntidades: totalEntidades ?? 0,
+      entidades:       entData?.map(r => ({ nombre: r.nombre_oficial, sinonimos: r.sinonimos ?? [] })) ?? [],
+      contratos:       [...new Set(contratoData?.map(r => r.tipo_contrato) ?? [])].sort(),
+      totalEntidades:  totalEntidades ?? 0,
+      ubicacionCounts: (ubicacionData ?? []) as { provincia: string; ciudad: string; total: number }[],
     }
   },
   ['convocape-filter-options'],
@@ -81,7 +86,9 @@ export default async function HomePage({ searchParams }: PageProps) {
     .eq('estado', 'activa')
 
   if (sp.q)            query = query.ilike('titulo', `%${sp.q}%`)
-  if (sp.departamento) query = query.ilike('ubicacion', `${sp.departamento} - %`)
+  if (sp.departamento && sp.ciudad) query = query.eq('ubicacion', `${sp.departamento} - ${sp.ciudad}`)
+  else if (sp.departamento)         query = query.ilike('ubicacion', `${sp.departamento} - %`)
+  if (sp.modalidad)    query = query.eq('modalidad', sp.modalidad)
   if (sp.contrato)     query = query.eq('tipo_contrato', sp.contrato)
   if (sp.nivel)        query = query.contains('nivel', [sp.nivel])
   if (sp.salario) {
@@ -117,7 +124,7 @@ export default async function HomePage({ searchParams }: PageProps) {
   const { data: rawConvocatorias, count } = await query
   const convocatorias = (rawConvocatorias ?? []).slice(0, ITEMS_PER_PAGE)
 
-  const { entidades, contratos, totalEntidades } = filterOptions
+  const { entidades, contratos, totalEntidades, ubicacionCounts } = filterOptions
   const departamentos    = DEPARTAMENTOS_PERU
   const totalUbicaciones = departamentos.length
   const totalPages       = Math.ceil((count ?? 0) / ITEMS_PER_PAGE)
@@ -137,10 +144,11 @@ export default async function HomePage({ searchParams }: PageProps) {
             departamentos={departamentos}
             entidades={entidades}
             contratos={contratos}
+            ubicacionCounts={ubicacionCounts}
             currentFilters={{
-              q: sp.q, departamento: sp.departamento,
-              entidad: sp.entidad, contrato: sp.contrato, salario: sp.salario,
-              nivel: sp.nivel, fecha: sp.fecha, orden: sp.orden,
+              q: sp.q, departamento: sp.departamento, ciudad: sp.ciudad,
+              modalidad: sp.modalidad, entidad: sp.entidad, contrato: sp.contrato,
+              salario: sp.salario, nivel: sp.nivel, fecha: sp.fecha, orden: sp.orden,
             }}
           />
         </Suspense>

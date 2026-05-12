@@ -1,25 +1,31 @@
 'use client'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import EntitySearch from '@/components/ui/EntitySearch'
+import UbicacionModal from '@/components/ui/UbicacionModal'
+
+interface UbicacionCount { provincia: string; ciudad: string; total: number }
 
 interface FiltersProps {
   departamentos: string[]
   entidades: { nombre: string, sinonimos: string[] }[]
   contratos: string[]
+  ubicacionCounts: UbicacionCount[]
   currentFilters: {
-    q?: string; departamento?: string; entidad?: string; contrato?: string
-    salario?: string; nivel?: string; fecha?: string; orden?: string
+    q?: string; departamento?: string; ciudad?: string; modalidad?: string
+    entidad?: string; contrato?: string; salario?: string; nivel?: string
+    fecha?: string; orden?: string
   }
 }
 
 const NIVELES = ['Técnico', 'Universitario', 'Maestría']
 const SEL = 'filter-select w-full px-3 py-2.5 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-peru-red/30 text-gray-700'
 
-export default function Filters({ departamentos, entidades, contratos, currentFilters }: FiltersProps) {
+export default function Filters({ departamentos, entidades, contratos, ubicacionCounts, currentFilters }: FiltersProps) {
   const router   = useRouter()
   const pathname = usePathname()
   const params   = useSearchParams()
+  const [ubicModalOpen, setUbicModalOpen] = useState(false)
 
   const update = useCallback((key: string, value: string) => {
     const p = new URLSearchParams(params.toString())
@@ -30,17 +36,42 @@ export default function Filters({ departamentos, entidades, contratos, currentFi
 
   const clear = () => router.push(pathname, { scroll: false })
 
-  const activeFilters: { label: string; key: string }[] = []
-  if (currentFilters.departamento) activeFilters.push({ label: currentFilters.departamento, key: 'departamento' })
-  if (currentFilters.entidad)      activeFilters.push({ label: currentFilters.entidad, key: 'entidad' })
-  if (currentFilters.contrato)     activeFilters.push({ label: currentFilters.contrato, key: 'contrato' })
-  if (currentFilters.nivel)        activeFilters.push({ label: currentFilters.nivel, key: 'nivel' })
-  if (currentFilters.fecha)        activeFilters.push({ label: `Últimos ${currentFilters.fecha} días`, key: 'fecha' })
+  const handleUbicacionApply = useCallback((provincia: string, ciudad: string, modalidad: string) => {
+    const p = new URLSearchParams(params.toString())
+    provincia ? p.set('departamento', provincia) : p.delete('departamento')
+    ciudad    ? p.set('ciudad', ciudad)           : p.delete('ciudad')
+    modalidad ? p.set('modalidad', modalidad)     : p.delete('modalidad')
+    p.delete('pagina')
+    router.push(`${pathname}?${p.toString()}`, { scroll: false })
+    setUbicModalOpen(false)
+  }, [router, pathname, params])
+
+  // Label del botón ubicación
+  const ubicLabel = currentFilters.ciudad
+    ? `${currentFilters.departamento} · ${currentFilters.ciudad}`
+    : currentFilters.departamento ?? 'Ubicación'
+
+  const activeFilters: { label: string; keys: string[] }[] = []
+  if (currentFilters.departamento || currentFilters.ciudad || currentFilters.modalidad) {
+    const parts = [ubicLabel, currentFilters.modalidad].filter(Boolean)
+    activeFilters.push({ label: parts.join(' · '), keys: ['departamento', 'ciudad', 'modalidad'] })
+  }
+  if (currentFilters.entidad)  activeFilters.push({ label: currentFilters.entidad, keys: ['entidad'] })
+  if (currentFilters.contrato) activeFilters.push({ label: currentFilters.contrato, keys: ['contrato'] })
+  if (currentFilters.nivel)    activeFilters.push({ label: currentFilters.nivel, keys: ['nivel'] })
+  if (currentFilters.fecha)    activeFilters.push({ label: `Últimos ${currentFilters.fecha} días`, keys: ['fecha'] })
   if (currentFilters.salario) {
     const label = currentFilters.salario === '8000+'
       ? 'Desde S/ 8,000'
       : `Hasta S/ ${Number(currentFilters.salario).toLocaleString()}`
-    activeFilters.push({ label, key: 'salario' })
+    activeFilters.push({ label, keys: ['salario'] })
+  }
+
+  const removeFilter = (keys: string[]) => {
+    const p = new URLSearchParams(params.toString())
+    keys.forEach(k => p.delete(k))
+    p.delete('pagina')
+    router.push(`${pathname}?${p.toString()}`, { scroll: false })
   }
 
   return (
@@ -53,10 +84,33 @@ export default function Filters({ departamentos, entidades, contratos, currentFi
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <select value={currentFilters.departamento ?? ''} onChange={e => update('departamento', e.target.value)} className={SEL}>
-          <option value="">Departamento</option>
-          {departamentos.map(d => <option key={d} value={d}>{d}</option>)}
-        </select>
+
+        {/* Ubicación — botón que abre modal */}
+        <div className="relative">
+          <button
+            onClick={() => setUbicModalOpen(true)}
+            className={`w-full px-3 py-2.5 rounded-lg border text-sm text-left flex items-center justify-between gap-2 transition-colors ${
+              currentFilters.departamento || currentFilters.modalidad
+                ? 'border-peru-red bg-peru-light text-peru-red font-medium'
+                : 'border-gray-200 bg-white text-gray-700'
+            }`}
+          >
+            <span className="truncate">{ubicLabel}</span>
+            <i className="fas fa-chevron-down text-xs shrink-0" />
+          </button>
+
+          {ubicModalOpen && (
+            <UbicacionModal
+              counts={ubicacionCounts}
+              departamentos={departamentos}
+              provincia={currentFilters.departamento ?? ''}
+              ciudad={currentFilters.ciudad ?? ''}
+              modalidad={currentFilters.modalidad ?? ''}
+              onApply={handleUbicacionApply}
+              onClose={() => setUbicModalOpen(false)}
+            />
+          )}
+        </div>
 
         <EntitySearch
           entidades={entidades}
@@ -96,8 +150,8 @@ export default function Filters({ departamentos, entidades, contratos, currentFi
         <div className="flex flex-wrap gap-2 mt-4">
           {activeFilters.map(f => (
             <span
-              key={f.key}
-              onClick={() => update(f.key, '')}
+              key={f.keys.join('-')}
+              onClick={() => removeFilter(f.keys)}
               className="tag bg-peru-light text-peru-red gap-1.5 cursor-pointer hover:bg-peru-glow transition-colors"
             >
               {f.label} <i className="fas fa-times text-xs" />
