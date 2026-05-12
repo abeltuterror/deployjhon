@@ -1,10 +1,11 @@
 'use client'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useCallback } from 'react'
+import EntitySearch from '@/components/ui/EntitySearch'
 
 interface FiltersProps {
   departamentos: string[]
-  entidades: string[]
+  entidades: { nombre: string, sinonimos: string[] }[]
   contratos: string[]
   currentFilters: {
     q?: string; departamento?: string; entidad?: string; contrato?: string
@@ -57,10 +58,11 @@ export default function Filters({ departamentos, entidades, contratos, currentFi
           {departamentos.map(d => <option key={d} value={d}>{d}</option>)}
         </select>
 
-        <select value={currentFilters.entidad ?? ''} onChange={e => update('entidad', e.target.value)} className={SEL}>
-          <option value="">Entidad</option>
-          {entidades.map(e => <option key={e} value={e}>{e}</option>)}
-        </select>
+        <EntitySearch
+          entidades={entidades}
+          value={currentFilters.entidad ?? ''}
+          onChange={v => update('entidad', v)}
+        />
 
         <select value={currentFilters.contrato ?? ''} onChange={e => update('contrato', e.target.value)} className={SEL}>
           <option value="">Tipo de contrato</option>

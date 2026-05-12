@@ -48,13 +48,13 @@ const getCachedFilterOptions = unstable_cache(
       { data: contratoData },
       { count: totalEntidades },
     ] = await Promise.all([
-      db.from('entidades').select('nombre_oficial').order('nombre_oficial'),
+      db.from('entidades').select('nombre_oficial, sinonimos').order('nombre_oficial'),
       db.from('convocatorias').select('tipo_contrato').eq('estado', 'activa'),
       db.from('entidades').select('id', { count: 'exact', head: true }),
     ])
 
     return {
-      entidades:      entData?.map(r => r.nombre_oficial) ?? [],
+      entidades:      entData?.map(r => ({ nombre: r.nombre_oficial, sinonimos: r.sinonimos ?? [] })) ?? [],
       contratos:      [...new Set(contratoData?.map(r => r.tipo_contrato) ?? [])].sort(),
       totalEntidades: totalEntidades ?? 0,
     }
