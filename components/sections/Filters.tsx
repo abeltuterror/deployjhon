@@ -36,11 +36,11 @@ export default function Filters({ departamentos, entidades, contratos, ubicacion
 
   const clear = () => router.push(pathname, { scroll: false })
 
-  const handleUbicacionApply = useCallback((provincia: string, ciudad: string, modalidad: string) => {
+  const handleUbicacionApply = useCallback((provincia: string, ciudad: string) => {
     const p = new URLSearchParams(params.toString())
     provincia ? p.set('departamento', provincia) : p.delete('departamento')
     ciudad    ? p.set('ciudad', ciudad)           : p.delete('ciudad')
-    modalidad ? p.set('modalidad', modalidad)     : p.delete('modalidad')
+    p.delete('modalidad')
     p.delete('pagina')
     router.push(`${pathname}?${p.toString()}`, { scroll: false })
     setUbicModalOpen(false)
@@ -52,9 +52,8 @@ export default function Filters({ departamentos, entidades, contratos, ubicacion
     : currentFilters.departamento ?? 'Ubicación'
 
   const activeFilters: { label: string; keys: string[] }[] = []
-  if (currentFilters.departamento || currentFilters.ciudad || currentFilters.modalidad) {
-    const parts = [ubicLabel, currentFilters.modalidad].filter(Boolean)
-    activeFilters.push({ label: parts.join(' · '), keys: ['departamento', 'ciudad', 'modalidad'] })
+  if (currentFilters.departamento || currentFilters.ciudad) {
+    activeFilters.push({ label: ubicLabel, keys: ['departamento', 'ciudad'] })
   }
   if (currentFilters.entidad)  activeFilters.push({ label: currentFilters.entidad, keys: ['entidad'] })
   if (currentFilters.contrato) activeFilters.push({ label: currentFilters.contrato, keys: ['contrato'] })
@@ -90,7 +89,7 @@ export default function Filters({ departamentos, entidades, contratos, ubicacion
           <button
             onClick={() => setUbicModalOpen(true)}
             className={`w-full px-3 py-2.5 rounded-lg border text-sm text-left flex items-center justify-between gap-2 transition-colors ${
-              currentFilters.departamento || currentFilters.modalidad
+              currentFilters.departamento || currentFilters.ciudad
                 ? 'border-peru-red bg-peru-light text-peru-red font-medium'
                 : 'border-gray-200 bg-white text-gray-700'
             }`}
@@ -105,7 +104,6 @@ export default function Filters({ departamentos, entidades, contratos, ubicacion
               departamentos={departamentos}
               provincia={currentFilters.departamento ?? ''}
               ciudad={currentFilters.ciudad ?? ''}
-              modalidad={currentFilters.modalidad ?? ''}
               onApply={handleUbicacionApply}
               onClose={() => setUbicModalOpen(false)}
             />
