@@ -23,6 +23,7 @@ const convocatoriaScraperSchema = z.object({
   documentos: z.array(z.string()).default([]),
   linkOficial: z.string().default(''),
   modalidad: z.string().default('Presencial'),
+  indexable: z.boolean().default(true),
 })
 
 const bulkSchema = z.array(convocatoriaScraperSchema).min(1).max(5000)
@@ -109,6 +110,7 @@ interface DbConvocatoria {
   estado: string
   nro_convocatoria: string
   numero_folio: string
+  indexable: boolean
 }
 
 async function transformToDb(
@@ -139,6 +141,7 @@ async function transformToDb(
     estado: 'activa',
     nro_convocatoria: item.nroConvocatoria,
     numero_folio: folio,
+    indexable: item.indexable,
   }
 }
 
