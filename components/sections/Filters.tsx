@@ -86,36 +86,45 @@ export default function Filters({ departamentos, entidades, contratos, ubicacion
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       {/* Buscador principal */}
-      <div className="relative mb-4">
-        <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none" />
-        <input
-          ref={searchRef}
-          type="text"
-          value={searchInput}
-          onChange={e => setSearchInput(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && handleSearch()}
-          placeholder="Cargo, categoría o empleo..."
-          className="w-full pl-9 pr-10 py-2.5 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-peru-red/30 text-gray-700"
-        />
-        {searchInput && (
-          <button
-            type="button"
-            onClick={() => { setSearchInput(''); update('q', '') }}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-          >
-            <i className="fas fa-times text-xs" />
-          </button>
-        )}
+      <div className="flex items-center gap-2 mb-4 max-w-xl mx-auto">
+        <div className="flex items-center flex-1 gap-2 border border-gray-200 rounded-xl bg-white px-3 py-2.5 focus-within:ring-2 focus-within:ring-peru-red/30">
+          <i className="fas fa-briefcase text-gray-400 text-sm shrink-0" />
+          <input
+            ref={searchRef}
+            type="text"
+            value={searchInput}
+            onChange={e => setSearchInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleSearch()}
+            placeholder="Cargo, categoría o emp..."
+            className="flex-1 text-sm focus:outline-none text-gray-700 bg-transparent"
+          />
+          {searchInput && (
+            <button
+              type="button"
+              onClick={() => { setSearchInput(''); update('q', '') }}
+              className="text-gray-400 hover:text-gray-600 shrink-0"
+            >
+              <i className="fas fa-times text-xs" />
+            </button>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={handleSearch}
+          className="bg-[#1a2e5a] hover:bg-[#152448] text-white p-2.5 rounded-xl transition-colors shrink-0"
+        >
+          <i className="fas fa-search text-sm" />
+        </button>
       </div>
 
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-center mb-4 relative">
         <h2 className="font-heading font-700 text-xl text-gray-900">Filtros avanzados</h2>
-        <button onClick={clear} className="text-sm text-peru-red hover:underline font-medium">
+        <button onClick={clear} className="text-sm text-peru-red hover:underline font-medium absolute right-0">
           Limpiar filtros
         </button>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 max-w-5xl mx-auto">
 
         {/* Ubicación — botón que abre modal */}
         <div className="relative">
