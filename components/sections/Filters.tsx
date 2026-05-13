@@ -85,15 +85,8 @@ export default function Filters({ departamentos, entidades, contratos, ubicacion
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="font-heading font-700 text-xl text-gray-900">Filtros avanzados</h2>
-        <button onClick={clear} className="text-sm text-peru-red hover:underline font-medium">
-          Limpiar filtros
-        </button>
-      </div>
-
       {/* Buscador principal */}
-      <div className="relative mb-3">
+      <div className="relative mb-4">
         <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none" />
         <input
           ref={searchRef}
@@ -113,6 +106,13 @@ export default function Filters({ departamentos, entidades, contratos, ubicacion
             <i className="fas fa-times text-xs" />
           </button>
         )}
+      </div>
+
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="font-heading font-700 text-xl text-gray-900">Filtros avanzados</h2>
+        <button onClick={clear} className="text-sm text-peru-red hover:underline font-medium">
+          Limpiar filtros
+        </button>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
