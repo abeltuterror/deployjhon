@@ -1,6 +1,6 @@
 'use client'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
-import { useCallback, useState } from 'react'
+import { useCallback, useState, useRef } from 'react'
 import EntitySearch from '@/components/ui/EntitySearch'
 import UbicacionModal from '@/components/ui/UbicacionModal'
 
@@ -26,6 +26,14 @@ export default function Filters({ departamentos, entidades, contratos, ubicacion
   const pathname = usePathname()
   const params   = useSearchParams()
   const [ubicModalOpen, setUbicModalOpen] = useState(false)
+  const [searchInput, setSearchInput]     = useState(currentFilters.q ?? '')
+  const searchRef = useRef<HTMLInputElement>(null)
+
+  const handleSearch = () => {
+    const term = searchInput.trim()
+    if (term.length >= 2) update('q', term)
+    else if (term.length === 0) update('q', '')
+  }
 
   const update = useCallback((key: string, value: string) => {
     const p = new URLSearchParams(params.toString())
@@ -52,6 +60,7 @@ export default function Filters({ departamentos, entidades, contratos, ubicacion
     : currentFilters.departamento ?? 'Lugar de trabajo'
 
   const activeFilters: { label: string; keys: string[] }[] = []
+  if (currentFilters.q) activeFilters.push({ label: `"${currentFilters.q}"`, keys: ['q'] })
   if (currentFilters.departamento || currentFilters.ciudad) {
     activeFilters.push({ label: ubicLabel, keys: ['departamento', 'ciudad'] })
   }
@@ -67,6 +76,7 @@ export default function Filters({ departamentos, entidades, contratos, ubicacion
   }
 
   const removeFilter = (keys: string[]) => {
+    if (keys.includes('q')) setSearchInput('')
     const p = new URLSearchParams(params.toString())
     keys.forEach(k => p.delete(k))
     p.delete('pagina')
@@ -80,6 +90,29 @@ export default function Filters({ departamentos, entidades, contratos, ubicacion
         <button onClick={clear} className="text-sm text-peru-red hover:underline font-medium">
           Limpiar filtros
         </button>
+      </div>
+
+      {/* Buscador principal */}
+      <div className="relative mb-3">
+        <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none" />
+        <input
+          ref={searchRef}
+          type="text"
+          value={searchInput}
+          onChange={e => setSearchInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && handleSearch()}
+          placeholder="Cargo, categoría o empleo..."
+          className="w-full pl-9 pr-10 py-2.5 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-peru-red/30 text-gray-700"
+        />
+        {searchInput && (
+          <button
+            type="button"
+            onClick={() => { setSearchInput(''); update('q', '') }}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+          >
+            <i className="fas fa-times text-xs" />
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
