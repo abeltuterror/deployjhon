@@ -49,19 +49,16 @@ const getCachedFilterOptions = unstable_cache(
       { data: entData },
       { data: contratoData },
       { count: totalEntidades },
-      { data: ubicacionData },
     ] = await Promise.all([
       db.from('entidades').select('nombre_oficial, sinonimos').order('nombre_oficial'),
       db.from('convocatorias').select('tipo_contrato').eq('estado', 'activa'),
       db.from('entidades').select('id', { count: 'exact', head: true }),
-      db.rpc('get_ubicacion_counts'),
     ])
 
     return {
-      entidades:       entData?.map(r => ({ nombre: r.nombre_oficial, sinonimos: r.sinonimos ?? [] })) ?? [],
-      contratos:       [...new Set(contratoData?.map(r => r.tipo_contrato) ?? [])].sort(),
-      totalEntidades:  totalEntidades ?? 0,
-      ubicacionCounts: (ubicacionData ?? []) as { provincia: string; ciudad: string; total: number }[],
+      entidades:      entData?.map(r => ({ nombre: r.nombre_oficial, sinonimos: r.sinonimos ?? [] })) ?? [],
+      contratos:      [...new Set(contratoData?.map(r => r.tipo_contrato) ?? [])].sort(),
+      totalEntidades: totalEntidades ?? 0,
     }
   },
   ['convocape-filter-options'],
@@ -107,7 +104,7 @@ export default async function HomePage({ searchParams }: PageProps) {
   else if (sp.orden === 'salario-bajo') query = query.order('sueldo',      { ascending: true })
   else                                  query = query.order('fecha_pub',   { ascending: false })
 
-  const [entResult, filterOptions] = await Promise.all([
+  const [entResult, filterOptions, { data: ubicacionData }] = await Promise.all([
     sp.entidad
       ? supabase
           .from('entidades')
@@ -116,6 +113,9 @@ export default async function HomePage({ searchParams }: PageProps) {
           .maybeSingle()
       : Promise.resolve({ data: null }),
     getCachedFilterOptions(),
+    supabase.rpc('get_ubicacion_counts', {
+      p_q: sp.q?.trim() && sp.q.trim().length >= 2 ? sp.q.trim() : null,
+    }),
   ])
 
   if (entResult.data) query = query.eq('entidad_id', entResult.data.id)
@@ -125,7 +125,8 @@ export default async function HomePage({ searchParams }: PageProps) {
   const { data: rawConvocatorias, count } = await query
   const convocatorias = (rawConvocatorias ?? []).slice(0, ITEMS_PER_PAGE)
 
-  const { entidades, contratos, totalEntidades, ubicacionCounts } = filterOptions
+  const { entidades, contratos, totalEntidades } = filterOptions
+  const ubicacionCounts = (ubicacionData ?? []) as { provincia: string; ciudad: string; total: number }[]
   const departamentos    = DEPARTAMENTOS_PERU
   const totalUbicaciones = departamentos.length
   const totalPages       = Math.ceil((count ?? 0) / ITEMS_PER_PAGE)
