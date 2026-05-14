@@ -1,5 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
+import Image from 'next/image'
+import Link from 'next/link'
 import { useAuth } from '@/providers/AuthProvider'
 import { usePanel } from '@/providers/PanelProvider'
 
@@ -48,12 +50,16 @@ export default function Navbar() {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <a href="/" className="flex items-center gap-2 group">
-              <div className="w-9 h-9 bg-peru-red rounded-lg flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
-                <i className="fas fa-landmark text-white text-sm" />
-              </div>
-              <span className="font-heading font-bold text-lg text-white">Convocatorias Perú</span>
-            </a>
+            <Link href="/" className="flex items-center group">
+              <Image
+                src="/logo.png"
+                alt="Convocape"
+                width={206}
+                height={36}
+                className="h-10 w-auto group-hover:opacity-90 transition-opacity"
+                priority
+              />
+            </Link>
 
             <div className="hidden md:flex items-center gap-6">
               <a href="#convocatorias" className="nav-link text-sm font-medium text-white/80 hover:text-white transition-colors">
