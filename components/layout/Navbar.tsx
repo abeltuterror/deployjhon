@@ -1,6 +1,5 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
 import { useAuth } from '@/providers/AuthProvider'
 import { usePanel } from '@/providers/PanelProvider'
@@ -51,13 +50,10 @@ export default function Navbar() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="flex items-center group">
-              <Image
-                src="/logo.png"
+              <img
+                src="/logo.svg"
                 alt="Convocape"
-                width={206}
-                height={36}
-                className="h-10 w-auto group-hover:opacity-90 transition-opacity"
-                priority
+                className="h-9 w-auto group-hover:opacity-90 transition-opacity"
               />
             </Link>
 
