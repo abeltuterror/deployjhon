@@ -40,7 +40,7 @@ export default function Navbar() {
   return (
     <>
       <nav
-        className="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
+        className="fixed top-0 left-0 right-0 z-60 transition-all duration-300"
         style={
           scrolled
             ? { background: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(12px)', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }
