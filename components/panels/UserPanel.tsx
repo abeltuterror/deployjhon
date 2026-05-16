@@ -83,7 +83,7 @@ export default function UserPanel() {
   if (!visible) return null
 
   return (
-    <div className="fixed inset-0 z-50">
+    <div className="fixed inset-0 z-70">
       <div className="modal-overlay absolute inset-0" onClick={closePanel} />
       <div
         className={`absolute inset-y-0 right-0 w-full max-w-md bg-white shadow-2xl overflow-y-auto slide-panel ${panelOpen ? '' : 'closed'}`}
