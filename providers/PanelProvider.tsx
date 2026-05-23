@@ -2,10 +2,12 @@
 import { createContext, useContext, useState, useCallback } from 'react'
 
 type PanelType = 'user' | 'admin' | null
+export type AuthMode = 'login' | 'register'
 
 interface PanelContextType {
   activePanel: PanelType
-  openPanel: (p: NonNullable<PanelType>) => void
+  authMode: AuthMode
+  openPanel: (p: NonNullable<PanelType>, mode?: AuthMode) => void
   closePanel: () => void
 }
 
@@ -13,11 +15,16 @@ const PanelContext = createContext<PanelContextType | null>(null)
 
 export function PanelProvider({ children }: { children: React.ReactNode }) {
   const [activePanel, setActivePanel] = useState<PanelType>(null)
-  const openPanel  = useCallback((p: NonNullable<PanelType>) => setActivePanel(p), [])
+  const [authMode, setAuthMode] = useState<AuthMode>('login')
+
+  const openPanel = useCallback((p: NonNullable<PanelType>, mode: AuthMode = 'login') => {
+    setAuthMode(mode)
+    setActivePanel(p)
+  }, [])
   const closePanel = useCallback(() => setActivePanel(null), [])
 
   return (
-    <PanelContext.Provider value={{ activePanel, openPanel, closePanel }}>
+    <PanelContext.Provider value={{ activePanel, authMode, openPanel, closePanel }}>
       {children}
     </PanelContext.Provider>
   )

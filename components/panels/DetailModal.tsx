@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { getConvocatoriaDetail, toggleGuardado } from '@/app/actions'
 import type { ConvocatoriaDetail } from '@/types/convocatoria'
 import CalendarButton from '@/components/ui/CalendarButton'
+import SaveAuthPromptModal from '@/components/ui/SaveAuthPromptModal'
 
 const CONTRATO_COLORS: Record<string, string> = {
   'CAS':      'bg-blue-100 text-blue-700',
@@ -118,6 +119,7 @@ function Content({ data: c, onClose }: { data: ConvocatoriaDetail; onClose: () =
   const isGeneric = !!(c.funciones?.[0]?.includes('según perfil'))
   const { user }  = useAuth()
   const [supabase] = useState(() => createClient())
+  const [showPrompt, setShowPrompt] = useState(false)
 
   const [saved, setSaved] = useState(() => {
     if (typeof window === 'undefined') return false
@@ -246,17 +248,18 @@ function Content({ data: c, onClose }: { data: ConvocatoriaDetail; onClose: () =
       )}
 
       {/* Sticky actions */}
+      {showPrompt && <SaveAuthPromptModal onClose={() => setShowPrompt(false)} />}
       <div className="sticky bottom-0 bg-white pt-4 border-t border-gray-100 space-y-2">
         <div className="flex gap-3">
           <button
-            onClick={toggleSave}
+            onClick={user ? toggleSave : () => setShowPrompt(true)}
             className={`flex-1 px-5 py-3 rounded-xl border-2 font-semibold text-sm transition-colors flex items-center justify-center gap-2
-              ${saved
+              ${saved && user
                 ? 'border-peru-red bg-peru-light text-peru-red'
                 : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`}
           >
-            <i className={`${saved ? 'fas' : 'far'} fa-bookmark`} />
-            {saved ? 'Guardado' : 'Guardar'}
+            <i className={`${saved && user ? 'fas' : 'far'} fa-bookmark`} />
+            {saved && user ? 'Guardado' : 'Guardar'}
           </button>
 
           {c.link_oficial ? (

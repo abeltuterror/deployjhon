@@ -8,6 +8,7 @@ type Mode = 'login' | 'register' | 'forgot'
 
 interface Props {
   onClose: () => void
+  initialMode?: 'login' | 'register'
 }
 
 // ─── Google SVG ───────────────────────────────────────────────────────────────
@@ -47,8 +48,8 @@ function ModalHeader({ onClose }: { onClose: () => void }) {
 
 // ─── AuthModal (router de modos) ──────────────────────────────────────────────
 
-export default function AuthModal({ onClose }: Props) {
-  const [mode, setMode] = useState<Mode>('login')
+export default function AuthModal({ onClose, initialMode = 'login' }: Props) {
+  const [mode, setMode] = useState<Mode>(initialMode)
 
   if (mode === 'register') return <RegisterView onClose={onClose} setMode={setMode} />
   if (mode === 'forgot')   return <ForgotView   onClose={onClose} setMode={setMode} />

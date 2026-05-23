@@ -53,7 +53,7 @@ const ESTADOS_KANBAN = [
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export default function UserPanel() {
-  const { activePanel, closePanel } = usePanel()
+  const { activePanel, authMode, closePanel } = usePanel()
   const { user, loading: authLoading } = useAuth()
   const [visible, setVisible]     = useState(false)
   const [panelOpen, setPanelOpen] = useState(false)
@@ -92,7 +92,7 @@ export default function UserPanel() {
           {authLoading ? (
             <PanelSkeleton />
           ) : !user ? (
-            <AuthModal onClose={closePanel} />
+            <AuthModal onClose={closePanel} initialMode={authMode} />
           ) : (
             <TabsView user={user} onClose={closePanel} />
           )}

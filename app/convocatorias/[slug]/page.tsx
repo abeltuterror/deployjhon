@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { getConvocatoriaBySlug, getAllActiveSlugs } from '@/app/actions'
 import { BASE_URL, EMPLOYMENT_TYPE, formatDateISO, slugifyEntidad, POSTAL_CODES } from '@/lib/seo'
+import GuardarPageButton from '@/components/ui/GuardarPageButton'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -162,7 +163,10 @@ export default async function ConvocatoriaPage({ params }: Props) {
         </div>
 
         {/* Título */}
-        <h1 className="font-heading font-700 text-3xl text-gray-900 mb-2 leading-snug">{c.titulo}</h1>
+        <div className="flex items-start justify-between gap-4 mb-2">
+          <h1 className="font-heading font-700 text-3xl text-gray-900 leading-snug">{c.titulo}</h1>
+          <GuardarPageButton convocatoriaId={c.id} />
+        </div>
         {entidad && (
           <Link href={`/entidades/${entidadSlug}`} className="text-peru-red font-medium hover:underline">
             {entidad}

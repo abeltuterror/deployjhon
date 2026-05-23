@@ -5,16 +5,11 @@ import { toggleGuardado } from '@/app/actions'
 import { useAuth } from '@/providers/AuthProvider'
 import SaveAuthPromptModal from '@/components/ui/SaveAuthPromptModal'
 
-interface Props {
-  convocatoriaId: number
-  isSaved?: boolean
-}
-
 const supabase = createClient()
 
-export default function BookmarkButton({ convocatoriaId, isSaved = false }: Props) {
+export default function GuardarPageButton({ convocatoriaId }: { convocatoriaId: number }) {
   const { user } = useAuth()
-  const [saved, setSaved] = useState(isSaved)
+  const [saved, setSaved] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [showPrompt, setShowPrompt] = useState(false)
 
@@ -29,15 +24,14 @@ export default function BookmarkButton({ convocatoriaId, isSaved = false }: Prop
       .then(({ data }) => setSaved(!!data))
   }, [user, convocatoriaId])
 
-  const toggle = (e: React.MouseEvent) => {
-    e.stopPropagation()
+  const handleClick = () => {
     if (!user) {
       setShowPrompt(true)
       return
     }
     startTransition(async () => {
-      const nextSaved = await toggleGuardado(convocatoriaId, user.id)
-      setSaved(nextSaved)
+      const next = await toggleGuardado(convocatoriaId, user.id)
+      setSaved(next)
     })
   }
 
@@ -45,12 +39,15 @@ export default function BookmarkButton({ convocatoriaId, isSaved = false }: Prop
     <>
       {showPrompt && <SaveAuthPromptModal onClose={() => setShowPrompt(false)} />}
       <button
-        onClick={toggle}
+        onClick={handleClick}
         disabled={isPending}
-        className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-gray-100 transition-colors disabled:opacity-50"
-        aria-label={saved ? 'Quitar de guardados' : 'Guardar convocatoria'}
+        className={`shrink-0 py-2.5 px-5 border-2 font-semibold rounded-xl transition-colors flex items-center gap-2 disabled:opacity-60
+          ${saved && user
+            ? 'border-peru-red bg-peru-light text-peru-red'
+            : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`}
       >
-        <i className={`${saved ? 'fas text-peru-red' : 'far text-gray-300'} fa-bookmark`} />
+        <i className={`${saved && user ? 'fas' : 'far'} fa-bookmark`} />
+        {saved && user ? 'Guardado' : 'Guardar'}
       </button>
     </>
   )
