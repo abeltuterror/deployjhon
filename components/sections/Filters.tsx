@@ -179,6 +179,7 @@ export default function Filters({ departamentos, entidades, contratos, ubicacion
         <select value={currentFilters.nivel ?? ''} onChange={e => update('nivel', e.target.value)} className={SEL}>
           <option value="">Nivel</option>
           {NIVELES.map(n => <option key={n} value={n}>{n}</option>)}
+          <option value="No especificado">Sin nivel</option>
         </select>
 
         <select value={currentFilters.fecha ?? ''} onChange={e => update('fecha', e.target.value)} className={SEL}>
