@@ -46,7 +46,7 @@ export default function Footer() {
               </li>
             </ul>
             <div className="flex gap-3 mt-4">
-              <a href="#" aria-label="Facebook" className="w-9 h-9 rounded-lg bg-white/10 hover:bg-peru-red flex items-center justify-center transition-colors">
+              <a href="https://www.facebook.com/profile.php?id=61590101289105" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="w-9 h-9 rounded-lg bg-white/10 hover:bg-peru-red flex items-center justify-center transition-colors">
                 <i className="fab fa-facebook-f text-sm" />
               </a>
               <a href="#" aria-label="Twitter" className="w-9 h-9 rounded-lg bg-white/10 hover:bg-peru-red flex items-center justify-center transition-colors">
