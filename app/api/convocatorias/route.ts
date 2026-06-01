@@ -31,7 +31,7 @@ const bulkSchema = z.array(convocatoriaScraperSchema).min(1).max(5000)
 
 // ─── Slug ──────────────────────────────────────────────────────────────
 
-function generateSlug(titulo: string, folio: string): string {
+function generateSlug(titulo: string, suffix: string): string {
   const base = titulo
     .toLowerCase()
     .normalize('NFD')
@@ -40,11 +40,9 @@ function generateSlug(titulo: string, folio: string): string {
     .replace(/^-|-$/g, '')
     .slice(0, 80)
 
-  const suffix = folio
-    ? folio.toLowerCase().replace(/[^a-z0-9]+/g, '-')
-    : Math.random().toString(36).substring(2, 7)
+  const slugSuffix = suffix.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 
-  return `${base}-${suffix}`
+  return `${base}-${slugSuffix}`
 }
 
 // ─── Entity Resolution ─────────────────────────────────────────────────
@@ -119,11 +117,12 @@ async function transformToDb(
   supabase: ReturnType<typeof createAdminClient>
 ): Promise<DbConvocatoria> {
   const entidadId = await resolveEntity(supabase, item.entidad)
-  const folio = item.numero_folio || ''
+  const [year, month] = item.fechaPub.split('-')
+  const slugSuffix = `${item.entidad}-${item.tipoContrato}-${year}-${month}-${item.numero_folio}`
 
   return {
     titulo: item.titulo,
-    slug: generateSlug(item.titulo, folio),
+    slug: generateSlug(item.titulo, slugSuffix),
     entidad_id: entidadId,
     ubicacion: item.ubicacion,
     sueldo: item.sueldo,
@@ -141,7 +140,7 @@ async function transformToDb(
     link_oficial: item.linkOficial,
     estado: 'activa',
     nro_convocatoria: item.nroConvocatoria,
-    numero_folio: folio,
+    numero_folio: item.numero_folio,
     indexable: item.indexable,
   }
 }
