@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { revalidatePath, revalidateTag } from 'next/cache'
+import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { z } from 'zod'
 
@@ -218,7 +218,7 @@ export async function POST(request: NextRequest) {
 
   revalidatePath('/')
   revalidatePath('/sitemap.xml')
-  revalidateTag('convocatorias-by-entidad')
+  revalidatePath('/entidades')
 
   return NextResponse.json(
     {
