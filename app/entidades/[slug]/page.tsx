@@ -7,6 +7,7 @@ import ConvocatoriaCard from '@/components/ui/ConvocatoriaCard'
 
 interface Props {
   params: Promise<{ slug: string }>
+  searchParams: Promise<{ page?: string }>
 }
 
 export const revalidate = 3600
@@ -28,7 +29,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!entidad) return { title: 'Entidad no encontrada | Convocape' }
 
   const year = new Date().getFullYear()
-  const convocatorias = await getConvocatoriasByEntidad(entidad.id)
+  const { total } = await getConvocatoriasByEntidad(entidad.id)
 
   const baseMetadata: Metadata = {
     title: `Convocatorias ${entidad.nombre_oficial} ${year} | Trabajo en ${entidad.nombre_oficial} | Convocape`,
@@ -38,19 +39,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
   }
 
-  if (convocatorias.length === 0) {
+  if (total === 0) {
     return { ...baseMetadata, robots: { index: false, follow: true } }
   }
 
   return baseMetadata
 }
 
-export default async function EntidadPage({ params }: Props) {
+export default async function EntidadPage({ params, searchParams }: Props) {
   const { slug } = await params
+  const { page: pageStr } = await searchParams
+  const page = Math.max(1, parseInt(pageStr ?? '1', 10))
+
   const entidad = await findEntidad(slug)
   if (!entidad) notFound()
 
-  const convocatorias = await getConvocatoriasByEntidad(entidad.id)
+  const { items: convocatorias, total } = await getConvocatoriasByEntidad(entidad.id, page)
+  const totalPages = Math.ceil(total / 12)
   const year = new Date().getFullYear()
 
   const jsonLd = {
@@ -58,7 +63,7 @@ export default async function EntidadPage({ params }: Props) {
     '@type': 'ItemList',
     name: `Convocatorias ${entidad.nombre_oficial} ${year}`,
     description: `Listado de convocatorias activas en ${entidad.nombre_oficial}`,
-    numberOfItems: convocatorias.length,
+    numberOfItems: total,
     itemListElement: convocatorias.map((c, i) => ({
       '@type': 'ListItem',
       position: i + 1,
@@ -88,8 +93,8 @@ export default async function EntidadPage({ params }: Props) {
             Convocatorias {entidad.nombre_oficial}
           </h1>
           <p className="text-gray-500">
-            {convocatorias.length > 0
-              ? `${convocatorias.length} convocatoria${convocatorias.length !== 1 ? 's' : ''} activa${convocatorias.length !== 1 ? 's' : ''}`
+            {total > 0
+              ? `${total} convocatoria${total !== 1 ? 's' : ''} activa${total !== 1 ? 's' : ''}`
               : 'Sin convocatorias activas por el momento'}
           </p>
         </div>
@@ -118,7 +123,35 @@ export default async function EntidadPage({ params }: Props) {
           </div>
         )}
 
-        <div className="mt-10 text-center">
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-3 mt-10">
+            {page > 1 ? (
+              <Link
+                href={`/entidades/${slug}?page=${page - 1}`}
+                className="px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                ← Anterior
+              </Link>
+            ) : (
+              <span className="px-4 py-2 rounded-xl text-sm text-gray-300">← Anterior</span>
+            )}
+            <span className="text-sm text-gray-500">
+              Página {page} de {totalPages}
+            </span>
+            {page < totalPages ? (
+              <Link
+                href={`/entidades/${slug}?page=${page + 1}`}
+                className="px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Siguiente →
+              </Link>
+            ) : (
+              <span className="px-4 py-2 rounded-xl text-sm text-gray-300">Siguiente →</span>
+            )}
+          </div>
+        )}
+
+        <div className="mt-6 text-center">
           <Link href="/" className="text-sm text-peru-red hover:underline">
             ← Ver todas las convocatorias del Estado peruano
           </Link>

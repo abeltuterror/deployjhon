@@ -102,23 +102,29 @@ export const getAllEntidades = unstable_cache(
   { revalidate: 3600 }
 )
 
+const PAGE_SIZE = 12
+
 export const getConvocatoriasByEntidad = unstable_cache(
-  async (entidadId: number): Promise<import('@/types/convocatoria').ConvocatoriaListItem[]> => {
+  async (entidadId: number, page = 1): Promise<{ items: import('@/types/convocatoria').ConvocatoriaListItem[], total: number }> => {
     const db = createPublicClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     )
-    const { data } = await db
+    const from = (page - 1) * PAGE_SIZE
+    const { data, count } = await db
       .from('convocatorias')
-      .select('id, slug, titulo, ubicacion, sueldo, fecha_limite, tipo_contrato, nivel, req_preview, modalidad, entidades(nombre_oficial)')
+      .select('id, slug, titulo, ubicacion, sueldo, fecha_limite, tipo_contrato, nivel, req_preview, modalidad, entidades(nombre_oficial)', { count: 'exact' })
       .eq('entidad_id', entidadId)
       .eq('estado', 'activa')
       .order('fecha_pub', { ascending: false })
-      .limit(24)
-    return (data as unknown as import('@/types/convocatoria').ConvocatoriaListItem[]) ?? []
+      .range(from, from + PAGE_SIZE - 1)
+    return {
+      items: (data as unknown as import('@/types/convocatoria').ConvocatoriaListItem[]) ?? [],
+      total: count ?? 0,
+    }
   },
   ['convocatorias-by-entidad'],
-  { revalidate: 3600 }
+  { revalidate: 3600, tags: ['convocatorias-by-entidad'] }
 )
 
 export async function toggleGuardado(convocatoriaId: number, userId: string): Promise<boolean> {
