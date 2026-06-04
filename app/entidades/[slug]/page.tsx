@@ -10,7 +10,7 @@ interface Props {
   searchParams: Promise<{ page?: string }>
 }
 
-export const revalidate = 3600
+export const revalidate = 86400
 
 export async function generateStaticParams() {
   if (process.env.NODE_ENV === 'development') return []

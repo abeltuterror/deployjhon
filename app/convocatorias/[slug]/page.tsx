@@ -9,7 +9,7 @@ interface Props {
   params: Promise<{ slug: string }>
 }
 
-export const revalidate = 3600
+export const revalidate = 86400
 
 export async function generateStaticParams() {
   // En dev no pre-renderizamos nada — solo en producción (build time)
