@@ -1,28 +1,42 @@
 CREATE EXTENSION IF NOT EXISTS unaccent;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
--- Wrapper IMMUTABLE necesario para usar unaccent en columnas generadas e índices
-CREATE OR REPLACE FUNCTION f_unaccent(text)
-RETURNS text LANGUAGE sql IMMUTABLE PARALLEL SAFE STRICT AS
-$$ SELECT public.unaccent('public.unaccent', $1) $$;
-
--- Columna generada: concatena campos relevantes normalizados
--- (entidad viene de JOIN, no es columna directa; requisitos es TEXT[])
+-- Columna regular (no generada) — evita el error de inmutabilidad con unaccent
 ALTER TABLE convocatorias
-  ADD COLUMN IF NOT EXISTS search_text_unaccent TEXT
-  GENERATED ALWAYS AS (
-    lower(f_unaccent(
-      coalesce(titulo, '')       || ' ' ||
-      array_to_string(coalesce(requisitos, '{}'::text[]), ' ') || ' ' ||
-      coalesce(descripcion, '')  || ' ' ||
-      coalesce(ubicacion, '')
-    ))
-  ) STORED;
+  ADD COLUMN IF NOT EXISTS search_text_unaccent TEXT;
 
+-- Poblar todas las filas existentes
+UPDATE convocatorias
+SET search_text_unaccent = lower(unaccent(
+  coalesce(titulo, '') || ' ' ||
+  array_to_string(coalesce(requisitos, '{}'::text[]), ' ') || ' ' ||
+  coalesce(descripcion, '') || ' ' ||
+  coalesce(ubicacion, '')
+));
+
+-- Índice GIN trigrama para búsqueda parcial rápida
 CREATE INDEX IF NOT EXISTS idx_convocatorias_search_text_trgm
   ON convocatorias USING GIN (search_text_unaccent gin_trgm_ops);
 
--- Actualizar RPC get_ubicacion_counts para usar el mismo criterio
+-- Trigger: mantiene la columna sincronizada en cada INSERT o UPDATE
+CREATE OR REPLACE FUNCTION trg_update_search_text()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  NEW.search_text_unaccent = lower(unaccent(
+    coalesce(NEW.titulo, '') || ' ' ||
+    array_to_string(coalesce(NEW.requisitos, '{}'::text[]), ' ') || ' ' ||
+    coalesce(NEW.descripcion, '') || ' ' ||
+    coalesce(NEW.ubicacion, '')
+  ));
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE TRIGGER trg_convocatorias_search_text
+  BEFORE INSERT OR UPDATE ON convocatorias
+  FOR EACH ROW EXECUTE FUNCTION trg_update_search_text();
+
+-- RPC get_ubicacion_counts actualizada
 CREATE OR REPLACE FUNCTION get_ubicacion_counts(p_q text DEFAULT NULL)
 RETURNS TABLE(provincia TEXT, ciudad TEXT, total BIGINT)
 LANGUAGE plpgsql STABLE AS $$
@@ -36,7 +50,7 @@ BEGIN
   WHERE c.estado = 'activa'
     AND (
       nullif(trim(p_q), '') IS NULL
-      OR c.search_text_unaccent ILIKE '%' || lower(f_unaccent(trim(p_q))) || '%'
+      OR c.search_text_unaccent ILIKE '%' || lower(unaccent(trim(p_q))) || '%'
     )
   GROUP BY 1, 2
   ORDER BY 3 DESC;
