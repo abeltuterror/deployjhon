@@ -82,8 +82,10 @@ export default async function HomePage({ searchParams }: PageProps) {
     )
     .eq('estado', 'activa')
 
-  if (sp.q?.trim() && sp.q.trim().length >= 2)
-    query = query.textSearch('titulo_tsv', sp.q.trim(), { type: 'plain', config: 'spanish' })
+  if (sp.q?.trim() && sp.q.trim().length >= 2) {
+    const norm = sp.q.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+    query = query.ilike('search_text_unaccent', `%${norm}%`)
+  }
   if (sp.departamento && sp.ciudad) query = query.eq('ubicacion', `${sp.departamento} - ${sp.ciudad}`)
   else if (sp.departamento)         query = query.ilike('ubicacion', `${sp.departamento} - %`)
   if (sp.modalidad)    query = query.eq('modalidad', sp.modalidad)
