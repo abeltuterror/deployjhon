@@ -38,7 +38,10 @@ interface PostulacionRow {
 
 interface AlertaRow {
   id: number
-  texto: string
+  texto: string | null
+  carrera: string | null
+  sueldo_min: number | null
+  departamento: string | null
   created_at: string
 }
 
@@ -141,7 +144,7 @@ function TabsView({ user, onClose }: { user: User; onClose: () => void }) {
       setLoadingData(true)
       supabase
         .from('alertas')
-        .select('id, texto, created_at')
+        .select('id, texto, carrera, sueldo_min, departamento, created_at')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .then(({ data }) => { setAlertas((data as unknown as AlertaRow[]) ?? []); setLoadingData(false) })
@@ -160,11 +163,11 @@ function TabsView({ user, onClose }: { user: User; onClose: () => void }) {
     setAlertas(prev => prev?.filter(a => a.id !== id) ?? [])
   }
 
-  const addAlerta = async (texto: string) => {
+  const addAlerta = async (alerta: { carrera: string; sueldo_min: number; departamento?: string }) => {
     const { data } = await supabase
       .from('alertas')
-      .insert({ user_id: user.id, texto })
-      .select('id, texto, created_at')
+      .insert({ user_id: user.id, ...alerta })
+      .select('id, texto, carrera, sueldo_min, departamento, created_at')
       .single()
     if (data) setAlertas(prev => [data as AlertaRow, ...(prev ?? [])])
   }
@@ -483,28 +486,43 @@ function PostulacionesTab({
 
 // ── Tab: Alertas ──────────────────────────────────────────────────────────────
 
+const DEPARTAMENTOS = [
+  'Amazonas','Ancash','Apurimac','Arequipa','Ayacucho','Cajamarca','Callao',
+  'Cusco','Huancavelica','Huanuco','Ica','Junin','La Libertad','Lambayeque',
+  'Lima','Loreto','Madre De Dios','Moquegua','Pasco','Piura','Puno',
+  'San Martin','Tacna','Tumbes','Ucayali',
+]
+
 function AlertasTab({
   items, onRemove, onAdd, esPremium, whatsappNumero, onUpgrade,
 }: {
   items: AlertaRow[]
   onRemove: (id: number) => void
-  onAdd: (texto: string) => Promise<void>
+  onAdd: (alerta: { carrera: string; sueldo_min: number; departamento?: string }) => Promise<void>
   esPremium: boolean
   whatsappNumero: string | null
   onUpgrade: () => void
 }) {
-  const [texto, setTexto]     = useState('')
-  const [saving, setSaving]   = useState(false)
-  const [wa, setWa]           = useState(whatsappNumero ?? '')
-  const [savingWa, setSavingWa] = useState(false)
-  const [waMsg, setWaMsg]     = useState('')
+  const [carrera, setCarrera]         = useState('')
+  const [sueldoMin, setSueldoMin]     = useState('')
+  const [depto, setDepto]             = useState('')
+  const [saving, setSaving]           = useState(false)
+  const [wa, setWa]                   = useState(whatsappNumero ?? '')
+  const [savingWa, setSavingWa]       = useState(false)
+  const [waMsg, setWaMsg]             = useState('')
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!texto.trim()) return
+    if (!carrera.trim() || !sueldoMin) return
     setSaving(true)
-    await onAdd(texto.trim())
-    setTexto('')
+    await onAdd({
+      carrera: carrera.trim(),
+      sueldo_min: Number(sueldoMin),
+      ...(depto ? { departamento: depto } : {}),
+    })
+    setCarrera('')
+    setSueldoMin('')
+    setDepto('')
     setSaving(false)
   }
 
@@ -566,48 +584,73 @@ function AlertasTab({
         )}
       </div>
 
-      {/* Alertas de texto (libres, gratuitas con delay) */}
+      {/* Nueva alerta estructurada */}
       <div>
-        <p className="text-xs font-semibold text-gray-600 mb-2">
-          Alertas por correo
-          {!esPremium && <span className="text-gray-400 font-normal ml-1">(con 24h de retraso)</span>}
+        <p className="text-xs font-semibold text-gray-600 mb-3">
+          Nueva alerta
+          {!esPremium && <span className="text-gray-400 font-normal ml-1">(correo con 24h de retraso)</span>}
         </p>
-        <form onSubmit={handleAdd} className="flex gap-2 mb-4">
+        <form onSubmit={handleAdd} className="space-y-2">
           <input
-            value={texto} onChange={e => setTexto(e.target.value)}
-            placeholder="Ej: CAS Enfermero Lima"
-            className="flex-1 px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-peru-red/30"
+            value={carrera} onChange={e => setCarrera(e.target.value)}
+            placeholder="Carrera o puesto (ej: Enfermero, CAS)"
+            required
+            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-peru-red/30"
           />
-          <button
-            type="submit" disabled={saving || !texto.trim()}
-            className="px-4 py-2.5 bg-peru-red hover:bg-peru-dark disabled:opacity-50 text-white font-semibold text-sm rounded-xl transition-colors"
-          >
-            {saving ? <i className="fas fa-spinner fa-spin" /> : <i className="fas fa-plus" />}
-          </button>
+          <input
+            type="number" min={0} value={sueldoMin} onChange={e => setSueldoMin(e.target.value)}
+            placeholder="Sueldo mínimo en S/ (ej: 2000)"
+            required
+            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-peru-red/30"
+          />
+          <div className="flex gap-2">
+            <select
+              value={depto} onChange={e => setDepto(e.target.value)}
+              className="flex-1 px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-peru-red/30 bg-white text-gray-600"
+            >
+              <option value="">Departamento (opcional)</option>
+              {DEPARTAMENTOS.map(d => <option key={d} value={d}>{d}</option>)}
+            </select>
+            <button
+              type="submit" disabled={saving || !carrera.trim() || !sueldoMin}
+              className="px-4 py-2.5 bg-peru-red hover:bg-peru-dark disabled:opacity-50 text-white font-semibold text-sm rounded-xl transition-colors shrink-0"
+            >
+              {saving ? <i className="fas fa-spinner fa-spin" /> : <i className="fas fa-plus" />}
+            </button>
+          </div>
         </form>
 
-        {items.length === 0 ? (
-          <EmptyState icon="fa-bell" text="No tienes alertas configuradas." />
-        ) : (
-          <ul className="space-y-2">
-            {items.map(a => (
-              <li key={a.id} className="flex items-center justify-between gap-2 bg-gray-50 rounded-xl px-4 py-3">
-                <div>
-                  <p className="text-sm font-medium text-gray-800">{a.texto}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    {new Date(a.created_at).toLocaleDateString('es-PE')}
-                  </p>
-                </div>
-                <button
-                  onClick={() => onRemove(a.id)}
-                  className="w-7 h-7 rounded-lg bg-white border border-gray-200 hover:bg-red-50 hover:border-red-200 flex items-center justify-center transition-colors shrink-0"
-                >
-                  <i className="fas fa-times text-gray-400 text-xs" />
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
+        <div className="mt-4">
+          {items.length === 0 ? (
+            <EmptyState icon="fa-bell" text="No tienes alertas configuradas." />
+          ) : (
+            <ul className="space-y-2">
+              {items.map(a => (
+                <li key={a.id} className="flex items-start justify-between gap-2 bg-gray-50 rounded-xl px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-800 truncate">
+                      {a.carrera ?? a.texto ?? '—'}
+                    </p>
+                    <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
+                      {a.sueldo_min != null && (
+                        <span className="text-xs text-gray-500">S/ {a.sueldo_min.toLocaleString()} mín.</span>
+                      )}
+                      {a.departamento && (
+                        <span className="text-xs text-gray-500"><i className="fas fa-map-marker-alt mr-0.5" />{a.departamento}</span>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => onRemove(a.id)}
+                    className="w-7 h-7 rounded-lg bg-white border border-gray-200 hover:bg-red-50 hover:border-red-200 flex items-center justify-center transition-colors shrink-0 mt-0.5"
+                  >
+                    <i className="fas fa-times text-gray-400 text-xs" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
     </div>
   )
