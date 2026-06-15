@@ -7,12 +7,7 @@ ALTER TABLE convocatorias
 
 -- Poblar todas las filas existentes
 UPDATE convocatorias
-SET search_text_unaccent = lower(unaccent(
-  coalesce(titulo, '') || ' ' ||
-  array_to_string(coalesce(requisitos, '{}'::text[]), ' ') || ' ' ||
-  coalesce(descripcion, '') || ' ' ||
-  coalesce(ubicacion, '')
-));
+SET search_text_unaccent = lower(unaccent(coalesce(titulo, '')));
 
 -- Índice GIN trigrama para búsqueda parcial rápida
 CREATE INDEX IF NOT EXISTS idx_convocatorias_search_text_trgm
@@ -22,12 +17,7 @@ CREATE INDEX IF NOT EXISTS idx_convocatorias_search_text_trgm
 CREATE OR REPLACE FUNCTION trg_update_search_text()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
-  NEW.search_text_unaccent = lower(unaccent(
-    coalesce(NEW.titulo, '') || ' ' ||
-    array_to_string(coalesce(NEW.requisitos, '{}'::text[]), ' ') || ' ' ||
-    coalesce(NEW.descripcion, '') || ' ' ||
-    coalesce(NEW.ubicacion, '')
-  ));
+  NEW.search_text_unaccent = lower(unaccent(coalesce(NEW.titulo, '')));
   RETURN NEW;
 END;
 $$;
