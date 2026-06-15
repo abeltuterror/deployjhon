@@ -537,27 +537,26 @@ function AlertasTab({
           )}
         </div>
 
-        {esPremium ? (
-          <form onSubmit={handleSaveWa} className="flex gap-2">
-            <input
-              value={wa} onChange={e => setWa(e.target.value)}
-              placeholder="9XX XXX XXX (Perú)"
-              className="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-green-400/30"
-            />
-            <button
-              type="submit" disabled={savingWa || !wa.trim()}
-              className="px-3 py-2 bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white font-semibold text-sm rounded-xl transition-colors"
-            >
-              {savingWa ? <i className="fas fa-spinner fa-spin" /> : <i className="fas fa-check" />}
-            </button>
-          </form>
-        ) : (
+        <form onSubmit={handleSaveWa} className="flex gap-2">
+          <input
+            value={wa} onChange={e => setWa(e.target.value)}
+            placeholder="9XX XXX XXX (Perú)"
+            className="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-green-400/30"
+          />
           <button
-            onClick={onUpgrade}
-            className="w-full text-xs text-gray-500 hover:text-peru-red transition-colors"
+            type="submit" disabled={savingWa || !wa.trim()}
+            className="px-3 py-2 bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white font-semibold text-sm rounded-xl transition-colors"
           >
-            Activa Premium para recibir alertas instantáneas en WhatsApp →
+            {savingWa ? <i className="fas fa-spinner fa-spin" /> : <i className="fas fa-check" />}
           </button>
+        </form>
+        {!esPremium && (
+          <p className="text-xs text-gray-500 mt-2">
+            Las notificaciones automáticas requieren{' '}
+            <button onClick={onUpgrade} className="text-amber-700 font-semibold hover:underline">
+              Premium
+            </button>.
+          </p>
         )}
 
         {waMsg && (
