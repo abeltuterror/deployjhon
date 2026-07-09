@@ -89,7 +89,44 @@ function hoyLocal(): number {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
 }
 
+const MESES: Record<string, number> = {
+  enero: 0, febrero: 1, marzo: 2, abril: 3, mayo: 4, junio: 5,
+  julio: 6, agosto: 7, setiembre: 8, septiembre: 8, octubre: 9,
+  noviembre: 10, diciembre: 11,
+}
+
+// "Del 09 de Julio del 2026 al 22 de Julio del 2026" → 09/07–22/07.
+// "21 y 22 de Julio del 2026" → 21/07–22/07. "No aplica" → null.
+// Recorre los tokens: los números de 1–2 cifras son días en espera, un mes
+// los consume, y el año (4 cifras) aplica a todo el texto.
+function parseFechaTexto(texto: string | null): { ini: number; fin: number } | null {
+  if (!texto) return null
+  const tokens = normalizarTexto(texto).match(/\d+|[a-z]+/g) ?? []
+  const diasEnEspera: number[] = []
+  const fechas: { dia: number; mes: number }[] = []
+  let anio: number | null = null
+
+  for (const t of tokens) {
+    if (/^\d+$/.test(t)) {
+      const n = Number(t)
+      if (t.length === 4) anio = n
+      else if (n >= 1 && n <= 31) diasEnEspera.push(n)
+    } else if (t in MESES) {
+      fechas.push(...diasEnEspera.splice(0).map(dia => ({ dia, mes: MESES[t] })))
+    }
+  }
+  if (fechas.length === 0 || anio === null) return null
+
+  const ms = fechas.map(f => new Date(anio as number, f.mes, f.dia).getTime())
+  return { ini: Math.min(...ms), fin: Math.max(...ms) }
+}
+
 function rangoEtapa(e: CronogramaEtapa): { ini: number; fin: number } | null {
+  // El texto escrito del anuncio manda: el extractor lo copia verbatim y es más
+  // confiable que sus fechaIni/fechaFin (a veces toma el "26" de "2026" como día)
+  const deTexto = parseFechaTexto(e.fechaTexto)
+  if (deTexto) return deTexto
+
   const a = parseFecha(e.fechaIni)
   const b = parseFecha(e.fechaFin)
   if (a === null && b === null) return null
