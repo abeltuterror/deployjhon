@@ -7,8 +7,9 @@ import { getConvocatoriaDetail, toggleGuardado } from '@/app/actions'
 import type { ConvocatoriaDetail } from '@/types/convocatoria'
 import {
   normalizeCronograma, gruposDeRequisitos, documentosOficialesVisibles,
-  etiquetaDocumento, postulacionAunNoAbre, ESTADO_ETAPA_CLS,
+  etiquetaDocumento, postulacionAunNoAbre,
 } from '@/lib/convocatoria'
+import CronogramaGantt from '@/components/ui/CronogramaGantt'
 import CalendarButton from '@/components/ui/CalendarButton'
 import SaveAuthPromptModal from '@/components/ui/SaveAuthPromptModal'
 
@@ -285,31 +286,7 @@ function Content({ data: c, onClose }: { data: ConvocatoriaDetail; onClose: () =
       {/* Cronograma del proceso (PSEP) */}
       {cronograma && (
         <Section icon="fa-calendar-alt" title="Cronograma del proceso">
-          <div className="space-y-4">
-            {cronograma.grupos.map(g => (
-              <div key={g.nombre}>
-                <h4 className="text-sm font-semibold text-gray-800 mb-2">{g.nombre}</h4>
-                <ul className="space-y-2">
-                  {g.etapas.map((e, i) => (
-                    <li key={i} className="flex items-start justify-between gap-3 text-sm">
-                      <div className="min-w-0">
-                        <span className="text-gray-700">{e.actividad}</span>
-                        <div className="text-xs text-gray-400 mt-0.5">
-                          {e.fechaTexto ?? [e.fechaIni, e.fechaFin].filter(Boolean).join(' — ')}
-                          {e.responsable && ` · ${e.responsable}`}
-                        </div>
-                      </div>
-                      {e.estado && (
-                        <span className={`tag shrink-0 ${ESTADO_ETAPA_CLS[e.estado.toLowerCase()] ?? 'bg-gray-100 text-gray-500'}`}>
-                          {e.estado}
-                        </span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
+          <CronogramaGantt cronograma={cronograma} />
         </Section>
       )}
 

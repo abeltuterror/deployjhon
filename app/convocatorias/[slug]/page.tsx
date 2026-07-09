@@ -5,8 +5,9 @@ import { getConvocatoriaBySlug, getAllActiveSlugs } from '@/app/actions'
 import { BASE_URL, EMPLOYMENT_TYPE, formatDateISO, slugifyEntidad, POSTAL_CODES } from '@/lib/seo'
 import {
   normalizeCronograma, gruposDeRequisitos, documentosOficialesVisibles,
-  etiquetaDocumento, postulacionAunNoAbre, ESTADO_ETAPA_CLS,
+  etiquetaDocumento, postulacionAunNoAbre,
 } from '@/lib/convocatoria'
+import CronogramaGantt from '@/components/ui/CronogramaGantt'
 import GuardarPageButton from '@/components/ui/GuardarPageButton'
 
 interface Props {
@@ -281,31 +282,7 @@ export default async function ConvocatoriaPage({ params }: Props) {
         {/* Cronograma del proceso (PSEP) */}
         {cronograma && (
           <Section icon="fa-calendar-alt" title="Cronograma del proceso">
-            <div className="space-y-4">
-              {cronograma.grupos.map(g => (
-                <div key={g.nombre}>
-                  <h3 className="text-sm font-semibold text-gray-800 mb-2">{g.nombre}</h3>
-                  <ul className="space-y-2">
-                    {g.etapas.map((e, i) => (
-                      <li key={i} className="flex items-start justify-between gap-3 text-sm">
-                        <div className="min-w-0">
-                          <span className="text-gray-700">{e.actividad}</span>
-                          <div className="text-xs text-gray-400 mt-0.5">
-                            {e.fechaTexto ?? [e.fechaIni, e.fechaFin].filter(Boolean).join(' — ')}
-                            {e.responsable && ` · ${e.responsable}`}
-                          </div>
-                        </div>
-                        {e.estado && (
-                          <span className={`tag shrink-0 ${ESTADO_ETAPA_CLS[e.estado.toLowerCase()] ?? 'bg-gray-100 text-gray-500'}`}>
-                            {e.estado}
-                          </span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
+            <CronogramaGantt cronograma={cronograma} />
           </Section>
         )}
 
