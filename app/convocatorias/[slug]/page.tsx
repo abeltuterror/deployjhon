@@ -3,6 +3,10 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { getConvocatoriaBySlug, getAllActiveSlugs } from '@/app/actions'
 import { BASE_URL, EMPLOYMENT_TYPE, formatDateISO, slugifyEntidad, POSTAL_CODES } from '@/lib/seo'
+import {
+  normalizeCronograma, gruposDeRequisitos, documentosOficialesVisibles,
+  etiquetaDocumento, postulacionAunNoAbre, ESTADO_ETAPA_CLS,
+} from '@/lib/convocatoria'
 import GuardarPageButton from '@/components/ui/GuardarPageButton'
 
 interface Props {
@@ -30,7 +34,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   return {
     title: `${c.titulo} - ${entidad} | Convocape`,
-    description: `Convocatoria para ${c.titulo} en ${entidad}. Sueldo S/ ${c.sueldo.toLocaleString()}. Postula antes del ${fechaLimite}. Tipo de contrato: ${c.tipo_contrato}.`,
+    description: `Convocatoria para ${c.titulo} en ${entidad}${c.unidad ? ` (${c.unidad})` : ''}. Sueldo S/ ${c.sueldo.toLocaleString()}. Postula antes del ${fechaLimite}. Tipo de contrato: ${c.tipo_contrato}.`,
     alternates: {
       canonical: `${BASE_URL}/convocatorias/${slug}`,
     },
@@ -69,6 +73,12 @@ export default async function ConvocatoriaPage({ params }: Props) {
   const isInactiva = c.estado === 'inactiva'
   const isGeneric  = !!(c.funciones?.[0]?.includes('según perfil'))
 
+  // Campos del extractor PSEP (null/vacíos en filas del scraper viejo)
+  const cronograma        = normalizeCronograma(c.cronograma)
+  const reqGrupos         = gruposDeRequisitos(c.requerimientos, c.requisitos)
+  const docsOficiales     = documentosOficialesVisibles(c.documentos_oficiales)
+  const postulacionFutura = !isInactiva && postulacionAunNoAbre(c.fecha_inicio_postulacion)
+
   const ubicRegion = c.ubicacion.includes(' - ') ? c.ubicacion.split(' - ')[0] : c.ubicacion
   const ubicCiudad = c.ubicacion.includes(' - ') ? c.ubicacion.split(' - ')[1] : c.ubicacion
 
@@ -105,6 +115,7 @@ export default async function ConvocatoriaPage({ params }: Props) {
       '@type': 'Organization',
       name: entidad,
     },
+    totalJobOpenings: c.vacantes ?? 1,
   }
 
   return (
@@ -150,6 +161,19 @@ export default async function ConvocatoriaPage({ params }: Props) {
           </div>
         )}
 
+        {/* Aviso: la ventana de postulación aún no abre */}
+        {postulacionFutura && (
+          <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+            <i className="far fa-clock text-amber-500 mt-0.5 shrink-0" />
+            <div>
+              <p className="font-semibold text-amber-800 text-sm">La postulación aún no abre</p>
+              <p className="text-amber-700 text-sm mt-0.5">
+                Podrás postular desde el {formatDate(c.fecha_inicio_postulacion!)} hasta el {formatDate(c.fecha_limite)}.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Tags */}
         <div className="flex flex-wrap gap-2 mb-4">
           <span className={`tag ${CONTRATO_COLORS[c.tipo_contrato] ?? 'bg-gray-100 text-gray-700'}`}>
@@ -185,6 +209,14 @@ export default async function ConvocatoriaPage({ params }: Props) {
             value={formatDate(c.fecha_limite)}
             red={!isInactiva && new Date(c.fecha_limite) < new Date(Date.now() + 5 * 86400000)}
           />
+          {c.unidad && <InfoCell label="Dependencia" value={c.unidad} />}
+          {c.nro_convocatoria && <InfoCell label="N.º convocatoria" value={c.nro_convocatoria} />}
+          {c.codigo_plaza && <InfoCell label="Código de plaza" value={c.codigo_plaza} />}
+          {(c.vacantes ?? 1) > 1 && <InfoCell label="Vacantes" value={String(c.vacantes)} />}
+          {c.fecha_inicio_postulacion && (
+            <InfoCell label="Inicio de postulación" value={formatDate(c.fecha_inicio_postulacion)} />
+          )}
+          {c.fecha_resultados && <InfoCell label="Resultados" value={formatDate(c.fecha_resultados)} />}
         </div>
 
         {/* Descripción */}
@@ -194,8 +226,26 @@ export default async function ConvocatoriaPage({ params }: Props) {
           </Section>
         )}
 
-        {/* Requisitos */}
-        {c.requisitos && c.requisitos.length > 0 && (
+        {/* Requisitos — agrupados por categoría (PSEP) o lista plana (scraper viejo) */}
+        {reqGrupos.length > 0 ? (
+          <Section icon="fa-check-circle" title="Requisitos">
+            <div className="space-y-4">
+              {reqGrupos.map(g => (
+                <div key={g.label}>
+                  <h3 className="text-sm font-semibold text-gray-800 mb-2">{g.label}</h3>
+                  <ul className="space-y-2">
+                    {g.items.map((r, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
+                        <i className="fas fa-check text-green-500 text-xs mt-1 shrink-0" />
+                        <span>{r}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </Section>
+        ) : c.requisitos && c.requisitos.length > 0 ? (
           <Section icon="fa-check-circle" title="Requisitos">
             <ul className="space-y-2">
               {c.requisitos.map((r, i) => (
@@ -206,7 +256,7 @@ export default async function ConvocatoriaPage({ params }: Props) {
               ))}
             </ul>
           </Section>
-        )}
+        ) : null}
 
         {/* Funciones */}
         {c.funciones && c.funciones.length > 0 && (
@@ -228,6 +278,37 @@ export default async function ConvocatoriaPage({ params }: Props) {
           </Section>
         )}
 
+        {/* Cronograma del proceso (PSEP) */}
+        {cronograma && (
+          <Section icon="fa-calendar-alt" title="Cronograma del proceso">
+            <div className="space-y-4">
+              {cronograma.grupos.map(g => (
+                <div key={g.nombre}>
+                  <h3 className="text-sm font-semibold text-gray-800 mb-2">{g.nombre}</h3>
+                  <ul className="space-y-2">
+                    {g.etapas.map((e, i) => (
+                      <li key={i} className="flex items-start justify-between gap-3 text-sm">
+                        <div className="min-w-0">
+                          <span className="text-gray-700">{e.actividad}</span>
+                          <div className="text-xs text-gray-400 mt-0.5">
+                            {e.fechaTexto ?? [e.fechaIni, e.fechaFin].filter(Boolean).join(' — ')}
+                            {e.responsable && ` · ${e.responsable}`}
+                          </div>
+                        </div>
+                        {e.estado && (
+                          <span className={`tag shrink-0 ${ESTADO_ETAPA_CLS[e.estado.toLowerCase()] ?? 'bg-gray-100 text-gray-500'}`}>
+                            {e.estado}
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </Section>
+        )}
+
         {/* Documentos */}
         {c.documentos && c.documentos.length > 0 && (
           <Section icon="fa-file-alt" title="Documentos necesarios">
@@ -236,6 +317,28 @@ export default async function ConvocatoriaPage({ params }: Props) {
                 <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
                   <i className="fas fa-paperclip text-gray-400 text-xs mt-1 shrink-0" />
                   <span>{d}</span>
+                </li>
+              ))}
+            </ul>
+          </Section>
+        )}
+
+        {/* Documentos oficiales (PDFs de la fuente — PSEP) */}
+        {docsOficiales.length > 0 && (
+          <Section icon="fa-file-pdf" title="Documentos oficiales">
+            <ul className="space-y-2">
+              {docsOficiales.map((d, i) => (
+                <li key={i}>
+                  <a
+                    href={d.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-sm text-peru-red hover:underline"
+                  >
+                    <i className="fas fa-file-pdf text-xs shrink-0" />
+                    <span>{etiquetaDocumento(d)}</span>
+                    <i className="fas fa-external-link-alt text-[10px] text-gray-400" />
+                  </a>
                 </li>
               ))}
             </ul>

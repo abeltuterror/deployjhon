@@ -22,6 +22,7 @@ interface PageProps {
     salario?: string
     nivel?: string
     fecha?: string
+    postulacion?: string
     orden?: string
     pagina?: string
   }>
@@ -77,7 +78,7 @@ export default async function HomePage({ searchParams }: PageProps) {
   let query = supabase
     .from('convocatorias')
     .select(
-      'id, slug, titulo, ubicacion, sueldo, fecha_limite, tipo_contrato, nivel, req_preview, modalidad, entidades(nombre_oficial)',
+      'id, slug, titulo, ubicacion, sueldo, fecha_limite, tipo_contrato, nivel, req_preview, modalidad, vacantes, fecha_inicio_postulacion, entidades(nombre_oficial)',
       { count: 'exact' }
     )
     .eq('estado', 'activa')
@@ -99,6 +100,11 @@ export default async function HomePage({ searchParams }: PageProps) {
     const since = new Date()
     since.setDate(since.getDate() - Number(sp.fecha))
     query = query.gte('fecha_pub', since.toISOString().split('T')[0])
+  }
+  if (sp.postulacion === 'abierta') {
+    // NULL = sin ventana de postulación (scraper viejo) → se considera abierta
+    const hoy = new Date().toISOString().split('T')[0]
+    query = query.or(`fecha_inicio_postulacion.is.null,fecha_inicio_postulacion.lte.${hoy}`)
   }
 
   if (sp.orden === 'limite')            query = query.order('fecha_limite', { ascending: true })
@@ -152,7 +158,8 @@ export default async function HomePage({ searchParams }: PageProps) {
             currentFilters={{
               q: sp.q, departamento: sp.departamento, ciudad: sp.ciudad,
               modalidad: sp.modalidad, entidad: sp.entidad, contrato: sp.contrato,
-              salario: sp.salario, nivel: sp.nivel, fecha: sp.fecha, orden: sp.orden,
+              salario: sp.salario, nivel: sp.nivel, fecha: sp.fecha,
+              postulacion: sp.postulacion, orden: sp.orden,
             }}
           />
         </Suspense>

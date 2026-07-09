@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import type { ConvocatoriaListItem } from '@/types/convocatoria'
+import { postulacionAunNoAbre } from '@/lib/convocatoria'
 import BookmarkButton from './BookmarkButton'
 
 
@@ -39,6 +40,7 @@ function calcUrgency(fechaLimite: string): { text: string; cls: string } {
 export default function ConvocatoriaCard({ convocatoria: c, isSaved, index }: Props) {
   const urgency = calcUrgency(c.fecha_limite)
   const delay   = Math.min(index * 0.05, 0.4)
+  const postulacionFutura = postulacionAunNoAbre(c.fecha_inicio_postulacion)
 
   return (
     <article
@@ -57,6 +59,18 @@ export default function ConvocatoriaCard({ convocatoria: c, isSaved, index }: Pr
           <span className="tag bg-green-100 text-green-700">
             S/ {c.sueldo.toLocaleString()}
           </span>
+          {(c.vacantes ?? 1) > 1 && (
+            <span className="tag bg-indigo-100 text-indigo-700">
+              <i className="fas fa-users mr-1 text-[10px]" />{c.vacantes} vacantes
+            </span>
+          )}
+          {postulacionFutura && (
+            <span className="tag bg-amber-100 text-amber-700">
+              <i className="far fa-clock mr-1 text-[10px]" />
+              Postulación desde {new Date(c.fecha_inicio_postulacion! + 'T00:00:00')
+                .toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' })}
+            </span>
+          )}
         </div>
         <BookmarkButton convocatoriaId={c.id} isSaved={isSaved} />
       </div>

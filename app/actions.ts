@@ -32,6 +32,8 @@ const fetchConvocatoriaDetail = unstable_cache(
         id, slug, titulo, ubicacion, sueldo, fecha_limite, fecha_pub,
         tipo_contrato, nivel, req_preview, modalidad, descripcion,
         requisitos, funciones, documentos, requerimientos, link_oficial,
+        nro_convocatoria, codigo_plaza, unidad, vacantes,
+        fecha_inicio_postulacion, fecha_resultados, cronograma, documentos_oficiales,
         entidad_id, entidades(nombre_oficial)
       `)
       .eq('id', id)
@@ -58,6 +60,8 @@ export const getConvocatoriaBySlug = unstable_cache(
         id, slug, titulo, ubicacion, sueldo, fecha_limite, fecha_pub,
         tipo_contrato, nivel, req_preview, modalidad, descripcion,
         requisitos, funciones, documentos, requerimientos, link_oficial,
+        nro_convocatoria, codigo_plaza, unidad, vacantes,
+        fecha_inicio_postulacion, fecha_resultados, cronograma, documentos_oficiales,
         estado, entidad_id, entidades(nombre_oficial)
       `)
       .eq('slug', slug)
@@ -113,7 +117,7 @@ export const getConvocatoriasByEntidad = unstable_cache(
     const from = (page - 1) * PAGE_SIZE
     const { data, count } = await db
       .from('convocatorias')
-      .select('id, slug, titulo, ubicacion, sueldo, fecha_limite, tipo_contrato, nivel, req_preview, modalidad, entidades(nombre_oficial)', { count: 'exact' })
+      .select('id, slug, titulo, ubicacion, sueldo, fecha_limite, tipo_contrato, nivel, req_preview, modalidad, vacantes, fecha_inicio_postulacion, entidades(nombre_oficial)', { count: 'exact' })
       .eq('entidad_id', entidadId)
       .eq('estado', 'activa')
       .order('fecha_pub', { ascending: false })

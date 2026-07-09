@@ -14,7 +14,7 @@ interface FiltersProps {
   currentFilters: {
     q?: string; departamento?: string; ciudad?: string; modalidad?: string
     entidad?: string; contrato?: string; salario?: string; nivel?: string
-    fecha?: string; orden?: string
+    fecha?: string; postulacion?: string; orden?: string
   }
 }
 
@@ -68,6 +68,7 @@ export default function Filters({ departamentos, entidades, contratos, ubicacion
   if (currentFilters.contrato) activeFilters.push({ label: currentFilters.contrato, keys: ['contrato'] })
   if (currentFilters.nivel)    activeFilters.push({ label: currentFilters.nivel, keys: ['nivel'] })
   if (currentFilters.fecha)    activeFilters.push({ label: `Últimos ${currentFilters.fecha} días`, keys: ['fecha'] })
+  if (currentFilters.postulacion) activeFilters.push({ label: 'Postulación abierta', keys: ['postulacion'] })
   if (currentFilters.salario) {
     const label = currentFilters.salario === '8000+'
       ? 'Desde S/ 8,000'
@@ -188,6 +189,11 @@ export default function Filters({ departamentos, entidades, contratos, ubicacion
           <option value="15">Últimos 15 días</option>
           <option value="30">Último mes</option>
           <option value="90">Últimos 3 meses</option>
+        </select>
+
+        <select value={currentFilters.postulacion ?? ''} onChange={e => update('postulacion', e.target.value)} className={SEL}>
+          <option value="">Postulación</option>
+          <option value="abierta">Abierta ahora</option>
         </select>
       </div>
 

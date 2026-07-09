@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { z } from 'zod'
+import type { Cronograma, DocumentoOficial } from '@/types/convocatoria'
 
 // ─── Zod Schema ────────────────────────────────────────────────────────
 
@@ -25,9 +26,135 @@ const convocatoriaScraperSchema = z.object({
   linkOficial: z.string().default(''),
   modalidad: z.string().default('Presencial'),
   indexable: z.boolean().default(true),
+  // Campos del extractor PSEP (Poder Judicial) — opcionales, retrocompatibles
+  fechaInicioPostulacion: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().default(null),
+  fechaResultados: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().default(null),
+  vacantes: z.number().int().positive().default(1),
+  unidad: z.string().default(''),
+  codigoPlaza: z.string().default(''),
+  cronograma: z
+    .array(
+      z.object({
+        etapa: z.string(),
+        fecha_ini: z.string().nullable().default(null),
+        fecha_fin: z.string().nullable().default(null),
+        fecha_texto: z.string().nullable().default(null),
+      })
+    )
+    .default([]),
+  documentosOficiales: z
+    .array(
+      z.object({
+        tipo: z.string(),
+        etiqueta: z.string().default(''),
+        url: z.string(),
+        disponible: z.boolean().default(true),
+      })
+    )
+    .default([]),
+  // Registro original del extractor, verbatim — fuente de verdad del scraper.
+  // Se guarda íntegro en la columna JSONB `origen` sin transformar.
+  origen: z.unknown().optional(),
 })
 
-const bulkSchema = z.array(convocatoriaScraperSchema).min(1).max(5000)
+const MAX_ITEMS = 5000
+
+// ─── Zod Schema PSEP (estructura anidada del nuevo extractor) ──────────
+// Se distingue del formato plano por la presencia de la clave `cabecera`.
+
+const psepEtapaSchema = z.object({
+  actividad: z.string().min(1),
+  fechaTexto: z.string().nullable().default(null),
+  fechaIni: z.string().nullable().default(null),
+  fechaFin: z.string().nullable().default(null),
+  responsable: z.string().nullable().default(null),
+  estado: z.string().nullable().default(null),
+  semana: z.object({ desde: z.number().int(), hasta: z.number().int() }).nullable().default(null),
+})
+
+const convocatoriaPsepSchema = z.object({
+  slug: z.string().min(1),
+  cabecera: z.object({
+    badges: z.array(z.string()).default([]),
+    titulo: z.string().min(1),
+    entidad: z.string().min(1),
+    nroConvocatoria: z.string().default(''),
+    codigoPlaza: z.string().default(''),
+  }),
+  resumen: z.object({
+    ubicacion: z.string().min(1),
+    sueldo: z.number().nonnegative(),
+    contrato: z.string().min(1),
+    dependencia: z.string().default(''),
+    publicacion: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    fechaLimite: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    vacantes: z.number().int().positive().default(1),
+    resultados: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().default(null),
+    inicioPostulacion: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().default(null),
+  }),
+  // avisoVentana no se persiste: se deriva de inicioPostulacion/fechaLimite al renderizar
+  avisoVentana: z.unknown().optional(),
+  descripcion: z.string().default(''),
+  requisitos: z.record(z.string(), z.array(z.string())).default({}),
+  funciones: z.array(z.string()).default([]),
+  cronograma: z
+    .object({
+      calculadoAl: z.string().nullable().default(null),
+      totalEtapas: z.number().int().nullable().default(null),
+      totalSemanas: z.number().int().nullable().default(null),
+      grupos: z
+        .array(
+          z.object({
+            nombre: z.string().min(1),
+            etapas: z.array(psepEtapaSchema).default([]),
+          })
+        )
+        .default([]),
+    })
+    .nullable()
+    .default(null),
+  documentosOficiales: z
+    .array(
+      z.object({
+        tipo: z.string(),
+        etiqueta: z.string().default(''),
+        url: z.string(),
+        disponible: z.boolean().default(true),
+      })
+    )
+    .default([]),
+  acciones: z
+    .object({
+      postular: z.string().default(''),
+      verMas: z.string().default(''),
+    })
+    .nullable()
+    .default(null),
+  // Si el extractor los envía explícitos, tienen prioridad sobre lo derivado de badges
+  nivel: z.array(z.string()).optional(),
+  modalidad: z.string().optional(),
+  indexable: z.boolean().default(true),
+})
+
+// ─── Badges → nivel / modalidad ────────────────────────────────────────
+// Los badges mezclan contrato, sueldo, modalidad y nivel; se extraen por listas conocidas.
+
+const MODALIDADES_CONOCIDAS = ['Presencial', 'Híbrida', 'Remota']
+const NIVELES_CONOCIDOS = [
+  'Universitario', 'Técnico', 'Bachiller', 'Titulado', 'Egresado',
+  'Secundaria', 'Primaria', 'Maestría', 'Doctorado',
+]
+
+function normalizeText(s: string): string {
+  return s.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+}
+
+function deriveBadges(badges: string[]): { nivel: string[]; modalidad: string } {
+  const set = badges.map(normalizeText)
+  const modalidad = MODALIDADES_CONOCIDAS.find(m => set.includes(normalizeText(m))) ?? 'Presencial'
+  const nivel = NIVELES_CONOCIDOS.filter(n => set.includes(normalizeText(n)))
+  return { nivel, modalidad }
+}
 
 // ─── Slug ──────────────────────────────────────────────────────────────
 
@@ -110,6 +237,37 @@ interface DbConvocatoria {
   nro_convocatoria: string
   numero_folio: string
   indexable: boolean
+  // Campos del extractor PSEP (Poder Judicial)
+  fecha_inicio_postulacion: string | null
+  fecha_resultados: string | null
+  vacantes: number
+  unidad: string | null
+  codigo_plaza: string | null
+  cronograma: Cronograma
+  documentos_oficiales: DocumentoOficial[]
+  origen: unknown
+}
+
+// El formato plano viejo ([{etapa, fecha_ini, ...}]) se normaliza al formato
+// canónico con grupos para que la UI maneje una sola estructura
+function cronogramaFromLegacy(
+  etapas: z.infer<typeof convocatoriaScraperSchema>['cronograma']
+): Cronograma {
+  if (etapas.length === 0) return { grupos: [] }
+  return {
+    grupos: [{
+      nombre: 'Cronograma',
+      etapas: etapas.map(e => ({
+        actividad: e.etapa,
+        fechaTexto: e.fecha_texto,
+        fechaIni: e.fecha_ini,
+        fechaFin: e.fecha_fin,
+        responsable: null,
+        estado: null,
+        semana: null,
+      })),
+    }],
+  }
 }
 
 async function transformToDb(
@@ -142,6 +300,60 @@ async function transformToDb(
     nro_convocatoria: item.nroConvocatoria,
     numero_folio: item.numero_folio,
     indexable: item.indexable,
+    fecha_inicio_postulacion: item.fechaInicioPostulacion,
+    fecha_resultados: item.fechaResultados,
+    vacantes: item.vacantes,
+    unidad: item.unidad || null,
+    codigo_plaza: item.codigoPlaza || null,
+    cronograma: cronogramaFromLegacy(item.cronograma),
+    documentos_oficiales: item.documentosOficiales,
+    origen: item.origen ?? null,
+  }
+}
+
+// ─── Transformar item PSEP (anidado) → formato DB ──────────────────────
+
+async function transformPsepToDb(
+  item: z.infer<typeof convocatoriaPsepSchema>,
+  raw: unknown,
+  supabase: ReturnType<typeof createAdminClient>
+): Promise<DbConvocatoria> {
+  const entidadId = await resolveEntity(supabase, item.cabecera.entidad)
+  const derived = deriveBadges(item.cabecera.badges)
+  const requisitosPlanos = Object.values(item.requisitos).flat().filter(Boolean)
+  const { nroConvocatoria, codigoPlaza } = item.cabecera
+
+  return {
+    titulo: item.cabecera.titulo,
+    slug: item.slug,
+    entidad_id: entidadId,
+    ubicacion: item.resumen.ubicacion,
+    sueldo: item.resumen.sueldo,
+    fecha_pub: item.resumen.publicacion,
+    fecha_limite: item.resumen.fechaLimite,
+    tipo_contrato: item.resumen.contrato,
+    nivel: item.nivel ?? derived.nivel,
+    descripcion: item.descripcion,
+    requisitos: requisitosPlanos,
+    req_preview: requisitosPlanos.slice(0, 3),
+    funciones: item.funciones,
+    documentos: [],
+    requerimientos: item.requisitos,
+    modalidad: item.modalidad ?? derived.modalidad,
+    link_oficial: item.acciones?.postular ?? '',
+    estado: 'activa',
+    nro_convocatoria: nroConvocatoria,
+    // Folio compuesto solo si ambos existen — el índice único parcial ignora vacíos
+    numero_folio: nroConvocatoria && codigoPlaza ? `pj-${nroConvocatoria}-${codigoPlaza}` : '',
+    indexable: item.indexable,
+    fecha_inicio_postulacion: item.resumen.inicioPostulacion,
+    fecha_resultados: item.resumen.resultados,
+    vacantes: item.resumen.vacantes,
+    unidad: item.resumen.dependencia || null,
+    codigo_plaza: codigoPlaza || null,
+    cronograma: item.cronograma ?? { grupos: [] },
+    documentos_oficiales: item.documentosOficiales,
+    origen: raw ?? null,
   }
 }
 
@@ -164,31 +376,62 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Body no es JSON válido' }, { status: 400 })
   }
 
-  // 3. Normalizar a array y validar con Zod
+  // 3. Normalizar a array y clasificar cada item por estructura:
+  //    con `cabecera` → formato PSEP (anidado); sin ella → formato plano original
   const normalized = Array.isArray(body) ? body : [body]
-  const parsed = bulkSchema.safeParse(normalized)
-  if (!parsed.success) {
+  if (normalized.length === 0 || normalized.length > MAX_ITEMS) {
     return NextResponse.json(
-      { error: 'Validación fallida', details: parsed.error.issues },
+      { error: `Se aceptan entre 1 y ${MAX_ITEMS} items por request` },
       { status: 400 }
     )
   }
 
-  const items = parsed.data
+  type ParsedItem =
+    | { kind: 'plano'; data: z.infer<typeof convocatoriaScraperSchema>; raw: unknown }
+    | { kind: 'psep'; data: z.infer<typeof convocatoriaPsepSchema>; raw: unknown }
+
+  const items: ParsedItem[] = []
+  const validationIssues: { index: number; formato: string; issues: unknown }[] = []
+
+  for (let i = 0; i < normalized.length; i++) {
+    const raw = normalized[i]
+    const isPsep = typeof raw === 'object' && raw !== null && 'cabecera' in raw
+
+    if (isPsep) {
+      const parsed = convocatoriaPsepSchema.safeParse(raw)
+      if (parsed.success) items.push({ kind: 'psep', data: parsed.data, raw })
+      else validationIssues.push({ index: i, formato: 'psep', issues: parsed.error.issues })
+    } else {
+      const parsed = convocatoriaScraperSchema.safeParse(raw)
+      if (parsed.success) items.push({ kind: 'plano', data: parsed.data, raw })
+      else validationIssues.push({ index: i, formato: 'plano', issues: parsed.error.issues })
+    }
+  }
+
+  if (validationIssues.length > 0) {
+    return NextResponse.json(
+      { error: 'Validación fallida', details: validationIssues },
+      { status: 400 }
+    )
+  }
+
   const supabase = createAdminClient()
 
   const results: DbConvocatoria[] = []
   const errors: { index: number; titulo: string; error: string }[] = []
 
-  // 4. Procesar cada item
+  // 4. Procesar cada item con el traductor de su formato
   for (let i = 0; i < items.length; i++) {
+    const item = items[i]
     try {
-      const dbItem = await transformToDb(items[i], supabase)
+      const dbItem = item.kind === 'psep'
+        ? await transformPsepToDb(item.data, item.raw, supabase)
+        : await transformToDb(item.data, supabase)
       results.push(dbItem)
     } catch (err) {
       errors.push({
         index: i,
-        titulo: items[i].titulo,
+        titulo: item.kind === 'psep' ? item.data.cabecera.titulo : item.data.titulo,
         error: err instanceof Error ? err.message : 'Error desconocido',
       })
     }
