@@ -8,6 +8,7 @@ import {
   etiquetaDocumento, postulacionAunNoAbre,
 } from '@/lib/convocatoria'
 import CronogramaGantt from '@/components/ui/CronogramaGantt'
+import VerMasMovil from '@/components/ui/VerMasMovil'
 import GuardarPageButton from '@/components/ui/GuardarPageButton'
 
 interface Props {
@@ -223,53 +224,61 @@ export default async function ConvocatoriaPage({ params }: Props) {
         {/* Descripción */}
         {c.descripcion && (
           <Section icon="fa-align-left" title="Descripción">
-            <p className="text-gray-600 text-sm leading-relaxed">{c.descripcion}</p>
+            <VerMasMovil activo={c.descripcion.length > 300}>
+              <p className="text-gray-600 text-sm leading-relaxed">{c.descripcion}</p>
+            </VerMasMovil>
           </Section>
         )}
 
         {/* Requisitos — agrupados por categoría (PSEP) o lista plana (scraper viejo) */}
         {reqGrupos.length > 0 ? (
           <Section icon="fa-check-circle" title="Requisitos">
-            <div className="space-y-4">
-              {reqGrupos.map(g => (
-                <div key={g.label}>
-                  <h3 className="text-sm font-semibold text-gray-800 mb-2">{g.label}</h3>
-                  <ul className="space-y-2">
-                    {g.items.map((r, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
-                        <i className="fas fa-check text-green-500 text-xs mt-1 shrink-0" />
-                        <span>{r}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
+            <VerMasMovil activo={reqGrupos.reduce((n, g) => n + g.items.length, 0) > 4}>
+              <div className="space-y-4">
+                {reqGrupos.map(g => (
+                  <div key={g.label}>
+                    <h3 className="text-sm font-semibold text-gray-800 mb-2">{g.label}</h3>
+                    <ul className="space-y-2">
+                      {g.items.map((r, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
+                          <i className="fas fa-check text-green-500 text-xs mt-1 shrink-0" />
+                          <span>{r}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </VerMasMovil>
           </Section>
         ) : c.requisitos && c.requisitos.length > 0 ? (
           <Section icon="fa-check-circle" title="Requisitos">
-            <ul className="space-y-2">
-              {c.requisitos.map((r, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
-                  <i className="fas fa-check text-green-500 text-xs mt-1 shrink-0" />
-                  <span>{r}</span>
-                </li>
-              ))}
-            </ul>
+            <VerMasMovil activo={c.requisitos.length > 4}>
+              <ul className="space-y-2">
+                {c.requisitos.map((r, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
+                    <i className="fas fa-check text-green-500 text-xs mt-1 shrink-0" />
+                    <span>{r}</span>
+                  </li>
+                ))}
+              </ul>
+            </VerMasMovil>
           </Section>
         ) : null}
 
         {/* Funciones */}
         {c.funciones && c.funciones.length > 0 && (
           <Section icon="fa-tasks" title="Funciones">
-            <ul className="space-y-2">
-              {c.funciones.map((f, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
-                  <i className="fas fa-arrow-right text-peru-red text-xs mt-1 shrink-0" />
-                  <span>{f}</span>
-                </li>
-              ))}
-            </ul>
+            <VerMasMovil activo={c.funciones.length > 4}>
+              <ul className="space-y-2">
+                {c.funciones.map((f, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
+                    <i className="fas fa-arrow-right text-peru-red text-xs mt-1 shrink-0" />
+                    <span>{f}</span>
+                  </li>
+                ))}
+              </ul>
+            </VerMasMovil>
             {isGeneric && (
               <p className="text-xs text-amber-600 mt-2 italic">
                 <i className="fas fa-info-circle mr-1" />
@@ -289,14 +298,16 @@ export default async function ConvocatoriaPage({ params }: Props) {
         {/* Documentos */}
         {c.documentos && c.documentos.length > 0 && (
           <Section icon="fa-file-alt" title="Documentos necesarios">
-            <ul className="space-y-2">
-              {c.documentos.map((d, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
-                  <i className="fas fa-paperclip text-gray-400 text-xs mt-1 shrink-0" />
-                  <span>{d}</span>
-                </li>
-              ))}
-            </ul>
+            <VerMasMovil activo={c.documentos.length > 4}>
+              <ul className="space-y-2">
+                {c.documentos.map((d, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
+                    <i className="fas fa-paperclip text-gray-400 text-xs mt-1 shrink-0" />
+                    <span>{d}</span>
+                  </li>
+                ))}
+              </ul>
+            </VerMasMovil>
           </Section>
         )}
 
