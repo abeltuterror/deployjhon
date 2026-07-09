@@ -1,6 +1,7 @@
 import { Fragment, type CSSProperties } from 'react'
 import type { Cronograma, CronogramaEtapa } from '@/types/convocatoria'
 import { ESTADO_ETAPA_CLS } from '@/lib/convocatoria'
+import { normalizarTexto, rangoFechas } from '@/lib/fechas-anuncio'
 
 // Tabla tipo Gantt para el cronograma del proceso.
 // Si el extractor no envía `semana`/`estado`, se estiman desde fechaIni/fechaFin:
@@ -52,10 +53,6 @@ function barStyle(semana: { desde: number; hasta: number }, numWeeks: number): C
 const MS_DIA = 86_400_000
 const MS_SEMANA = 7 * MS_DIA
 
-function normalizarTexto(s: string): string {
-  return s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
-}
-
 // "listado de postulantes" va antes que "publicacion": esa etapa es del comité,
 // no de difusión, aunque su nombre empiece con "Publicación del listado…"
 function grupoDe(actividad: string): string {
@@ -77,61 +74,13 @@ function responsableDe(actividad: string): string {
   return 'Comité'
 }
 
-// 'YYYY-MM-DD…' → ms a medianoche local (evita desfase de zona horaria de new Date(string))
-function parseFecha(s: string | null): number | null {
-  if (!s) return null
-  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/)
-  return m ? new Date(+m[1], +m[2] - 1, +m[3]).getTime() : null
-}
-
 function hoyLocal(): number {
   const d = new Date()
   return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
 }
 
-const MESES: Record<string, number> = {
-  enero: 0, febrero: 1, marzo: 2, abril: 3, mayo: 4, junio: 5,
-  julio: 6, agosto: 7, setiembre: 8, septiembre: 8, octubre: 9,
-  noviembre: 10, diciembre: 11,
-}
-
-// "Del 09 de Julio del 2026 al 22 de Julio del 2026" → 09/07–22/07.
-// "21 y 22 de Julio del 2026" → 21/07–22/07. "No aplica" → null.
-// Recorre los tokens: los números de 1–2 cifras son días en espera, un mes
-// los consume, y el año (4 cifras) aplica a todo el texto.
-function parseFechaTexto(texto: string | null): { ini: number; fin: number } | null {
-  if (!texto) return null
-  const tokens = normalizarTexto(texto).match(/\d+|[a-z]+/g) ?? []
-  const diasEnEspera: number[] = []
-  const fechas: { dia: number; mes: number }[] = []
-  let anio: number | null = null
-
-  for (const t of tokens) {
-    if (/^\d+$/.test(t)) {
-      const n = Number(t)
-      if (t.length === 4) anio = n
-      else if (n >= 1 && n <= 31) diasEnEspera.push(n)
-    } else if (t in MESES) {
-      fechas.push(...diasEnEspera.splice(0).map(dia => ({ dia, mes: MESES[t] })))
-    }
-  }
-  if (fechas.length === 0 || anio === null) return null
-
-  const ms = fechas.map(f => new Date(anio as number, f.mes, f.dia).getTime())
-  return { ini: Math.min(...ms), fin: Math.max(...ms) }
-}
-
 function rangoEtapa(e: CronogramaEtapa): { ini: number; fin: number } | null {
-  // El texto escrito del anuncio manda: el extractor lo copia verbatim y es más
-  // confiable que sus fechaIni/fechaFin (a veces toma el "26" de "2026" como día)
-  const deTexto = parseFechaTexto(e.fechaTexto)
-  if (deTexto) return deTexto
-
-  const a = parseFecha(e.fechaIni)
-  const b = parseFecha(e.fechaFin)
-  if (a === null && b === null) return null
-  const ini = a ?? (b as number)
-  return { ini, fin: Math.max(ini, b ?? ini) }
+  return rangoFechas(e.fechaTexto, e.fechaIni, e.fechaFin)
 }
 
 function deriveCronograma(c: Cronograma): Cronograma | null {

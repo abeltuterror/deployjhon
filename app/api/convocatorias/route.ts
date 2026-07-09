@@ -3,6 +3,7 @@ import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { z } from 'zod'
 import type { Cronograma, DocumentoOficial } from '@/types/convocatoria'
+import { normalizarTexto, rangoFechas, msToISO } from '@/lib/fechas-anuncio'
 
 // ─── Zod Schema ────────────────────────────────────────────────────────
 
@@ -357,6 +358,26 @@ async function transformPsepToDb(
   }
 }
 
+// ─── Integridad de fechas ──────────────────────────────────────────────
+// El extractor a veces parsea mal los rangos del PDF y manda fechaPub futura
+// (toma el "26" del año "2026" como día). Una fecha de publicación nunca puede
+// ser futura: se corrige con la etapa "Aprobación de la Convocatoria" del
+// cronograma (el texto escrito manda) o, en su defecto, con la fecha de hoy.
+
+function corregirFechaPub(row: DbConvocatoria, hoyISO: string): DbConvocatoria {
+  if (row.fecha_pub <= hoyISO) return row
+
+  const etapas = row.cronograma?.grupos?.flatMap(g => g.etapas) ?? []
+  const aprobacion = etapas.find(e => normalizarTexto(e.actividad).includes('aprobacion'))
+  const rango = aprobacion
+    ? rangoFechas(aprobacion.fechaTexto, aprobacion.fechaIni, aprobacion.fechaFin)
+    : null
+
+  const corregida = rango ? msToISO(rango.ini) : hoyISO
+  row.fecha_pub = corregida <= hoyISO ? corregida : hoyISO
+  return row
+}
+
 // ─── POST Handler ──────────────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
@@ -421,13 +442,14 @@ export async function POST(request: NextRequest) {
   const errors: { index: number; titulo: string; error: string }[] = []
 
   // 4. Procesar cada item con el traductor de su formato
+  const hoyISO = msToISO(Date.now())
   for (let i = 0; i < items.length; i++) {
     const item = items[i]
     try {
       const dbItem = item.kind === 'psep'
         ? await transformPsepToDb(item.data, item.raw, supabase)
         : await transformToDb(item.data, supabase)
-      results.push(dbItem)
+      results.push(corregirFechaPub(dbItem, hoyISO))
     } catch (err) {
       errors.push({
         index: i,
