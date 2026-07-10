@@ -10,6 +10,7 @@ import {
   etiquetaDocumento, postulacionAunNoAbre,
 } from '@/lib/convocatoria'
 import CronogramaGantt from '@/components/ui/CronogramaGantt'
+import DocumentosPdfBotones from '@/components/ui/DocumentosPdfBotones'
 import VerMasMovil from '@/components/ui/VerMasMovil'
 import CalendarButton from '@/components/ui/CalendarButton'
 import SaveAuthPromptModal from '@/components/ui/SaveAuthPromptModal'
@@ -224,6 +225,9 @@ function Content({ data: c, onClose }: { data: ConvocatoriaDetail; onClose: () =
         )}
         {c.fecha_resultados && <InfoCell label="Resultados" value={formatDate(c.fecha_resultados)} />}
       </div>
+
+      {/* Accesos rápidos a la fuente: PDFs oficiales o anuncio oficial */}
+      <DocumentosPdfBotones docs={docsOficiales} linkOficial={c.link_oficial} />
 
       {/* Descripción */}
       {c.descripcion && (
