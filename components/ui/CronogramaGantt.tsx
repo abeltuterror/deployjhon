@@ -74,9 +74,13 @@ function responsableDe(actividad: string): string {
   return 'Comité'
 }
 
+// Hoy en Perú a medianoche — en el servidor (UTC) la fecha local se adelantaría 5h
 function hoyLocal(): number {
-  const d = new Date()
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+  const [y, m, d] = new Date()
+    .toLocaleDateString('en-CA', { timeZone: 'America/Lima' })
+    .split('-')
+    .map(Number)
+  return new Date(y, m - 1, d).getTime()
 }
 
 function rangoEtapa(e: CronogramaEtapa): { ini: number; fin: number } | null {

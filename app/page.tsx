@@ -83,14 +83,13 @@ export default async function HomePage({ searchParams }: PageProps) {
     ? (await supabase.from('entidades').select('id').eq('nombre_oficial', sp.entidad).maybeSingle()).data?.id ?? null
     : null
 
-  // Factoría de query con TODOS los filtros — el orden por ventana de postulación
-  // necesita varias sub-consultas idénticas salvo por el tramo de fechas
-  const nuevaQuery = (head = false) => {
+  // Query del listado con TODOS los filtros acumulados
+  const nuevaQuery = () => {
     let q = supabase
       .from('convocatorias')
       .select(
         'id, slug, titulo, ubicacion, sueldo, fecha_limite, tipo_contrato, nivel, req_preview, modalidad, vacantes, fecha_inicio_postulacion, entidades(nombre_oficial)',
-        head ? { count: 'exact', head: true } : { count: 'exact' }
+        { count: 'exact' }
       )
       .eq('estado', 'activa')
 
@@ -123,47 +122,15 @@ export default async function HomePage({ searchParams }: PageProps) {
   let rawConvocatorias: unknown[] = []
   let count: number | null = null
 
-  if (sp.orden === 'limite' || sp.orden === 'salario-alto' || sp.orden === 'salario-bajo') {
+  {
     let query = nuevaQuery()
     if (sp.orden === 'limite')            query = query.order('fecha_limite', { ascending: true })
     else if (sp.orden === 'salario-alto') query = query.order('sueldo',       { ascending: false })
-    else                                  query = query.order('sueldo',       { ascending: true })
+    else if (sp.orden === 'salario-bajo') query = query.order('sueldo',       { ascending: true })
+    else                                  query = query.order('fecha_pub',    { ascending: false })
     const res = await query.order('id', { ascending: false }).range(from, to)
     rawConvocatorias = res.data ?? []
     count = res.count
-  } else {
-    // Orden por defecto según la ventana de postulación:
-    // abiertas (cierre más próximo primero) → por abrir (apertura más próxima) → cerradas.
-    // Los grupos dependen de "hoy", así que se pagina cruzando 3 sub-consultas disjuntas.
-    const abiertas = (head = false) =>
-      nuevaQuery(head).gte('fecha_limite', hoy).or(`fecha_inicio_postulacion.is.null,fecha_inicio_postulacion.lte.${hoy}`)
-    const porAbrir = (head = false) =>
-      nuevaQuery(head).gte('fecha_limite', hoy).gt('fecha_inicio_postulacion', hoy)
-    const cerradas = (head = false) => nuevaQuery(head).lt('fecha_limite', hoy)
-
-    const [cA, cB, cC] = await Promise.all([abiertas(true), porAbrir(true), cerradas(true)])
-    const grupos = [
-      { total: cA.count ?? 0, query: () => abiertas().order('fecha_limite', { ascending: true }) },
-      { total: cB.count ?? 0, query: () => porAbrir().order('fecha_inicio_postulacion', { ascending: true }) },
-      { total: cC.count ?? 0, query: () => cerradas().order('fecha_limite', { ascending: false }) },
-    ]
-    count = grupos.reduce((s, g) => s + g.total, 0)
-
-    // La página [from, to] puede cruzar la frontera entre grupos
-    const fetches = []
-    let offset = 0
-    for (const g of grupos) {
-      const gFrom = from - offset
-      const gTo = to - offset
-      if (g.total > 0 && gTo >= 0 && gFrom < g.total) {
-        fetches.push(
-          g.query().order('id', { ascending: false }).range(Math.max(gFrom, 0), Math.min(gTo, g.total - 1))
-        )
-      }
-      offset += g.total
-    }
-    const partes = await Promise.all(fetches)
-    rawConvocatorias = partes.flatMap(p => p.data ?? [])
   }
 
   const [filterOptions, { data: ubicacionData }] = await Promise.all([
