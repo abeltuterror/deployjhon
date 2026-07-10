@@ -130,7 +130,7 @@ export default async function ConvocatoriaPage({ params }: Props) {
         />
       )}
 
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 pt-24 pb-10">
         {/* Breadcrumb */}
         <nav className="text-sm text-gray-500 mb-6 flex items-center gap-2">
           <Link href="/" className="hover:text-peru-red transition-colors">Inicio</Link>

@@ -79,7 +79,7 @@ export default async function EntidadPage({ params, searchParams }: Props) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-10">
         {/* Breadcrumb */}
         <nav className="text-sm text-gray-500 mb-6 flex items-center gap-2">
           <Link href="/" className="hover:text-peru-red transition-colors">Inicio</Link>

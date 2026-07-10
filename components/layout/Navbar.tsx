@@ -1,12 +1,14 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { useAuth } from '@/providers/AuthProvider'
 import { usePanel } from '@/providers/PanelProvider'
 
 export default function Navbar() {
   const { user, profile } = useAuth()
   const { openPanel }     = usePanel()
+  const pathname          = usePathname()
 
   const [scrolled, setScrolled]     = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -42,7 +44,9 @@ export default function Navbar() {
       <nav
         className="fixed top-0 left-0 right-0 z-60 transition-all duration-300"
         style={
-          scrolled
+          // Solo el home tiene hero oscuro detrás: fuera de él (o al scrollear)
+          // el fondo va sólido para que el menú blanco se lea y no tape contenido claro
+          scrolled || pathname !== '/'
             ? { background: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(12px)', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }
             : { background: 'transparent' }
         }
