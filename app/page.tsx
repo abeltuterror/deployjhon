@@ -128,10 +128,11 @@ export default async function HomePage({ searchParams }: PageProps) {
     else if (sp.orden === 'salario-alto') query = query.order('sueldo',       { ascending: false })
     else if (sp.orden === 'salario-bajo') query = query.order('sueldo',       { ascending: true })
     else {
-      // Recientes primero; dentro del mismo día, ventana de apertura más próxima
-      // primero (las sin ventana definida al final del día)
+      // Ventana con más tiempo por delante primero: cierre más lejano arriba
+      // (las vencidas quedan naturalmente al final); a igual cierre,
+      // apertura más próxima primero y las sin ventana definida después
       query = query
-        .order('fecha_pub', { ascending: false })
+        .order('fecha_limite', { ascending: false })
         .order('fecha_inicio_postulacion', { ascending: true, nullsFirst: false })
     }
     const res = await query.order('id', { ascending: false }).range(from, to)
