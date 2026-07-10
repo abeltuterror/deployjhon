@@ -463,7 +463,34 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Ningún item válido', errors }, { status: 400 })
   }
 
-  // 5. Upsert masivo — deduplica por slug (constraint UNIQUE completa)
+  // 5. Reconciliar slug por folio: si el folio ya existe con otro slug (p. ej.
+  // el extractor corrigió el título y el slug derivado cambió), se conserva el
+  // slug ya publicado para que el upsert actualice esa fila en vez de chocar
+  // con el índice único parcial de numero_folio. Además mantiene estable la
+  // URL indexada por Google.
+  const folios = results.map(r => r.numero_folio).filter(Boolean)
+  if (folios.length > 0) {
+    const { data: existentes, error: folioError } = await supabase
+      .from('convocatorias')
+      .select('slug, numero_folio')
+      .in('numero_folio', folios)
+
+    if (folioError) {
+      console.error('Error consultando folios existentes:', folioError)
+      return NextResponse.json(
+        { error: 'Error al guardar', details: folioError.message },
+        { status: 500 }
+      )
+    }
+
+    const slugPorFolio = new Map(existentes.map(e => [e.numero_folio, e.slug]))
+    for (const row of results) {
+      const slugExistente = slugPorFolio.get(row.numero_folio)
+      if (slugExistente) row.slug = slugExistente
+    }
+  }
+
+  // 6. Upsert masivo — deduplica por slug (constraint UNIQUE completa)
   // numero_folio usa índice parcial que PostgREST no admite en ON CONFLICT
   const { data, error: upsertError } = await supabase
     .from('convocatorias')
