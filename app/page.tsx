@@ -127,7 +127,13 @@ export default async function HomePage({ searchParams }: PageProps) {
     if (sp.orden === 'limite')            query = query.order('fecha_limite', { ascending: true })
     else if (sp.orden === 'salario-alto') query = query.order('sueldo',       { ascending: false })
     else if (sp.orden === 'salario-bajo') query = query.order('sueldo',       { ascending: true })
-    else                                  query = query.order('fecha_pub',    { ascending: false })
+    else {
+      // Recientes primero; dentro del mismo día, ventana de apertura más próxima
+      // primero (las sin ventana definida al final del día)
+      query = query
+        .order('fecha_pub', { ascending: false })
+        .order('fecha_inicio_postulacion', { ascending: true, nullsFirst: false })
+    }
     const res = await query.order('id', { ascending: false }).range(from, to)
     rawConvocatorias = res.data ?? []
     count = res.count
