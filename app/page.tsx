@@ -75,63 +75,105 @@ export default async function HomePage({ searchParams }: PageProps) {
   const from    = (page - 1) * ITEMS_PER_PAGE
   const to      = from + ITEMS_PER_PAGE - 1
 
-  let query = supabase
-    .from('convocatorias')
-    .select(
-      'id, slug, titulo, ubicacion, sueldo, fecha_limite, tipo_contrato, nivel, req_preview, modalidad, vacantes, fecha_inicio_postulacion, entidades(nombre_oficial)',
-      { count: 'exact' }
-    )
-    .eq('estado', 'activa')
+  // Hoy en Perú (el servidor corre en UTC) — define los grupos de la ventana
+  const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' })
 
-  if (sp.q?.trim() && sp.q.trim().length >= 2) {
-    const norm = sp.q.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-    query = query.ilike('search_text_unaccent', `%${norm}%`)
-  }
-  if (sp.departamento && sp.ciudad) query = query.eq('ubicacion', `${sp.departamento} - ${sp.ciudad}`)
-  else if (sp.departamento)         query = query.ilike('ubicacion', `${sp.departamento} - %`)
-  if (sp.modalidad)    query = query.eq('modalidad', sp.modalidad)
-  if (sp.contrato)     query = query.eq('tipo_contrato', sp.contrato)
-  if (sp.nivel)        query = query.contains('nivel', [sp.nivel])
-  if (sp.salario) {
-    if (sp.salario === '8000+') query = query.gte('sueldo', 8000)
-    else                         query = query.lte('sueldo', Number(sp.salario))
-  }
-  if (sp.fecha) {
-    const since = new Date()
-    since.setDate(since.getDate() - Number(sp.fecha))
-    query = query.gte('fecha_pub', since.toISOString().split('T')[0])
-  }
-  if (sp.postulacion === 'abierta') {
-    // NULL = sin ventana de postulación (scraper viejo) → se considera abierta
-    const hoy = new Date().toISOString().split('T')[0]
-    query = query.or(`fecha_inicio_postulacion.is.null,fecha_inicio_postulacion.lte.${hoy}`)
+  // El filtro de entidad se resuelve primero: las queries del listado lo necesitan
+  const entidadId = sp.entidad
+    ? (await supabase.from('entidades').select('id').eq('nombre_oficial', sp.entidad).maybeSingle()).data?.id ?? null
+    : null
+
+  // Factoría de query con TODOS los filtros — el orden por ventana de postulación
+  // necesita varias sub-consultas idénticas salvo por el tramo de fechas
+  const nuevaQuery = (head = false) => {
+    let q = supabase
+      .from('convocatorias')
+      .select(
+        'id, slug, titulo, ubicacion, sueldo, fecha_limite, tipo_contrato, nivel, req_preview, modalidad, vacantes, fecha_inicio_postulacion, entidades(nombre_oficial)',
+        head ? { count: 'exact', head: true } : { count: 'exact' }
+      )
+      .eq('estado', 'activa')
+
+    if (sp.q?.trim() && sp.q.trim().length >= 2) {
+      const norm = sp.q.trim().normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+      q = q.ilike('search_text_unaccent', `%${norm}%`)
+    }
+    if (sp.departamento && sp.ciudad) q = q.eq('ubicacion', `${sp.departamento} - ${sp.ciudad}`)
+    else if (sp.departamento)         q = q.ilike('ubicacion', `${sp.departamento} - %`)
+    if (sp.modalidad)    q = q.eq('modalidad', sp.modalidad)
+    if (sp.contrato)     q = q.eq('tipo_contrato', sp.contrato)
+    if (sp.nivel)        q = q.contains('nivel', [sp.nivel])
+    if (sp.salario) {
+      if (sp.salario === '8000+') q = q.gte('sueldo', 8000)
+      else                        q = q.lte('sueldo', Number(sp.salario))
+    }
+    if (sp.fecha) {
+      const since = new Date()
+      since.setDate(since.getDate() - Number(sp.fecha))
+      q = q.gte('fecha_pub', since.toISOString().split('T')[0])
+    }
+    if (sp.postulacion === 'abierta') {
+      // NULL = sin ventana de postulación (scraper viejo) → se considera abierta
+      q = q.or(`fecha_inicio_postulacion.is.null,fecha_inicio_postulacion.lte.${hoy}`)
+    }
+    if (entidadId !== null) q = q.eq('entidad_id', entidadId)
+    return q
   }
 
-  if (sp.orden === 'limite')            query = query.order('fecha_limite', { ascending: true })
-  else if (sp.orden === 'salario-alto') query = query.order('sueldo',      { ascending: false })
-  else if (sp.orden === 'salario-bajo') query = query.order('sueldo',      { ascending: true })
-  else                                  query = query.order('fecha_pub',   { ascending: false })
+  let rawConvocatorias: unknown[] = []
+  let count: number | null = null
 
-  const [entResult, filterOptions, { data: ubicacionData }] = await Promise.all([
-    sp.entidad
-      ? supabase
-          .from('entidades')
-          .select('id')
-          .eq('nombre_oficial', sp.entidad)
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
+  if (sp.orden === 'limite' || sp.orden === 'salario-alto' || sp.orden === 'salario-bajo') {
+    let query = nuevaQuery()
+    if (sp.orden === 'limite')            query = query.order('fecha_limite', { ascending: true })
+    else if (sp.orden === 'salario-alto') query = query.order('sueldo',       { ascending: false })
+    else                                  query = query.order('sueldo',       { ascending: true })
+    const res = await query.order('id', { ascending: false }).range(from, to)
+    rawConvocatorias = res.data ?? []
+    count = res.count
+  } else {
+    // Orden por defecto según la ventana de postulación:
+    // abiertas (cierre más próximo primero) → por abrir (apertura más próxima) → cerradas.
+    // Los grupos dependen de "hoy", así que se pagina cruzando 3 sub-consultas disjuntas.
+    const abiertas = (head = false) =>
+      nuevaQuery(head).gte('fecha_limite', hoy).or(`fecha_inicio_postulacion.is.null,fecha_inicio_postulacion.lte.${hoy}`)
+    const porAbrir = (head = false) =>
+      nuevaQuery(head).gte('fecha_limite', hoy).gt('fecha_inicio_postulacion', hoy)
+    const cerradas = (head = false) => nuevaQuery(head).lt('fecha_limite', hoy)
+
+    const [cA, cB, cC] = await Promise.all([abiertas(true), porAbrir(true), cerradas(true)])
+    const grupos = [
+      { total: cA.count ?? 0, query: () => abiertas().order('fecha_limite', { ascending: true }) },
+      { total: cB.count ?? 0, query: () => porAbrir().order('fecha_inicio_postulacion', { ascending: true }) },
+      { total: cC.count ?? 0, query: () => cerradas().order('fecha_limite', { ascending: false }) },
+    ]
+    count = grupos.reduce((s, g) => s + g.total, 0)
+
+    // La página [from, to] puede cruzar la frontera entre grupos
+    const fetches = []
+    let offset = 0
+    for (const g of grupos) {
+      const gFrom = from - offset
+      const gTo = to - offset
+      if (g.total > 0 && gTo >= 0 && gFrom < g.total) {
+        fetches.push(
+          g.query().order('id', { ascending: false }).range(Math.max(gFrom, 0), Math.min(gTo, g.total - 1))
+        )
+      }
+      offset += g.total
+    }
+    const partes = await Promise.all(fetches)
+    rawConvocatorias = partes.flatMap(p => p.data ?? [])
+  }
+
+  const [filterOptions, { data: ubicacionData }] = await Promise.all([
     getCachedFilterOptions(),
     supabase.rpc('get_ubicacion_counts', {
       p_q: sp.q?.trim() && sp.q.trim().length >= 2 ? sp.q.trim() : null,
     }),
   ])
 
-  if (entResult.data) query = query.eq('entidad_id', entResult.data.id)
-
-  query = query.range(from, to)
-
-  const { data: rawConvocatorias, count } = await query
-  const convocatorias = (rawConvocatorias ?? []).slice(0, ITEMS_PER_PAGE)
+  const convocatorias = rawConvocatorias.slice(0, ITEMS_PER_PAGE)
 
   const { entidades, contratos, totalEntidades } = filterOptions
   const ubicacionCounts = (ubicacionData ?? []) as { provincia: string; ciudad: string; total: number }[]

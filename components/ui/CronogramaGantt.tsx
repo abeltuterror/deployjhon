@@ -109,12 +109,19 @@ function deriveCronograma(c: Cronograma): Cronograma | null {
   const esGenerico = c.grupos.length === 1 &&
     ['cronograma', ''].includes(normalizarTexto(c.grupos[0].nombre))
 
+  // Etapas sin fechas interpretables (ni texto ni ISO) quedan fuera del Gantt
   if (!esGenerico) {
-    return { ...c, grupos: c.grupos.map(g => ({ nombre: g.nombre, etapas: g.etapas.map(completar) })) }
+    return {
+      ...c,
+      grupos: c.grupos
+        .map(g => ({ nombre: g.nombre, etapas: g.etapas.filter(e => rangoEtapa(e) !== null).map(completar) }))
+        .filter(g => g.etapas.length > 0),
+    }
   }
 
   const porGrupo = new Map<string, CronogramaEtapa[]>()
   for (const e of c.grupos[0].etapas) {
+    if (rangoEtapa(e) === null) continue
     const nombre = grupoDe(e.actividad)
     if (!porGrupo.has(nombre)) porGrupo.set(nombre, [])
     porGrupo.get(nombre)!.push(completar(e))
@@ -161,7 +168,7 @@ function EtapaRow({ etapa: e, numWeeks, cols, weekLines, weeksCol, showResp }: {
   return (
     <div className="grid items-center border-t border-gray-100" style={cols}>
       <div className="px-3 py-2">
-        <p className="text-sm font-semibold text-gray-800 leading-snug line-clamp-4" title={e.actividad}>
+        <p className="text-sm font-semibold text-gray-800 leading-snug line-clamp-3" title={e.actividad}>
           {e.actividad}
         </p>
         {fecha && <p className="text-[11px] text-gray-400 mt-0.5">{fecha}</p>}

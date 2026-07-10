@@ -59,6 +59,8 @@ export function rangoFechas(
   const a = parseFechaISO(fechaIni)
   const b = parseFechaISO(fechaFin)
   if (a === null && b === null) return null
+  // Rango invertido (mal parseado por el extractor) → evento de un solo día en fecha_fin
+  if (a !== null && b !== null && a > b) return { ini: b, fin: b }
   const ini = a ?? (b as number)
   return { ini, fin: Math.max(ini, b ?? ini) }
 }

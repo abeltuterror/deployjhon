@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import type { ConvocatoriaListItem } from '@/types/convocatoria'
-import { postulacionAunNoAbre } from '@/lib/convocatoria'
+import { ventanaPostulacion } from '@/lib/convocatoria'
 import BookmarkButton from './BookmarkButton'
 
 
@@ -23,24 +23,10 @@ const NIVEL_COLORS: Record<string, string> = {
   'Maestría':     'bg-violet-100 text-violet-700',
 }
 
-// Calculado server-side → sin flash de hidratación
-function calcUrgency(fechaLimite: string): { text: string; cls: string } {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const lim  = new Date(fechaLimite + 'T00:00:00')
-  const days = Math.ceil((lim.getTime() - today.getTime()) / 86_400_000)
-
-  if (days > 7)   return { text: `${days} días`, cls: 'bg-green-100 text-green-700' }
-  if (days > 3)   return { text: `${days} días`, cls: 'bg-amber-100 text-amber-700' }
-  if (days > 0)   return { text: `${days} días`, cls: 'bg-red-100 text-red-700' }
-  if (days === 0) return { text: 'Hoy',          cls: 'bg-amber-100 text-amber-700' }
-  return           { text: 'Vencida',            cls: 'bg-red-100 text-red-700' }
-}
-
 export default function ConvocatoriaCard({ convocatoria: c, isSaved, index }: Props) {
-  const urgency = calcUrgency(c.fecha_limite)
+  // Calculado server-side → sin flash de hidratación
+  const ventana = ventanaPostulacion(c.fecha_inicio_postulacion, c.fecha_limite)
   const delay   = Math.min(index * 0.05, 0.4)
-  const postulacionFutura = postulacionAunNoAbre(c.fecha_inicio_postulacion)
 
   return (
     <article
@@ -62,13 +48,6 @@ export default function ConvocatoriaCard({ convocatoria: c, isSaved, index }: Pr
           {(c.vacantes ?? 1) > 1 && (
             <span className="tag bg-indigo-100 text-indigo-700">
               <i className="fas fa-users mr-1 text-[10px]" />{c.vacantes} vacantes
-            </span>
-          )}
-          {postulacionFutura && (
-            <span className="tag bg-amber-100 text-amber-700">
-              <i className="far fa-clock mr-1 text-[10px]" />
-              Postulación desde {new Date(c.fecha_inicio_postulacion! + 'T00:00:00')
-                .toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' })}
             </span>
           )}
         </div>
@@ -94,14 +73,19 @@ export default function ConvocatoriaCard({ convocatoria: c, isSaved, index }: Pr
         </div>
       )}
 
-      {/* Footer: urgencia + ver detalles */}
-      <div className="flex items-center justify-between mt-auto pt-3 border-t border-gray-50">
-        <span className={`tag ${urgency.cls}`}>
-          <i className="fas fa-clock mr-1" />{urgency.text}
-        </span>
+      {/* Footer: tramo de postulación + ver detalles */}
+      <div className="flex items-center justify-between gap-2 mt-auto pt-3 border-t border-gray-50">
+        {ventana && (
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+            <span className={`tag ${ventana.cls}`}>
+              <i className="far fa-clock mr-1 text-[10px]" />{ventana.tramo}
+            </span>
+            <span className="text-[11px] text-gray-400 whitespace-nowrap">{ventana.detalle}</span>
+          </div>
+        )}
         <Link
           href={`/convocatorias/${c.slug}`}
-          className="text-sm font-semibold text-peru-red hover:text-peru-dark transition-colors flex items-center gap-1"
+          className="shrink-0 text-sm font-semibold text-peru-red hover:text-peru-dark transition-colors flex items-center gap-1"
         >
           Ver detalles <i className="fas fa-arrow-right text-xs" />
         </Link>

@@ -1,4 +1,5 @@
 import type { Cronograma, CronogramaEtapa, CronogramaGrupo, DocumentoOficial } from '@/types/convocatoria'
+import { parseFechaISO } from '@/lib/fechas-anuncio'
 
 // ─── Cronograma ─────────────────────────────────────────────────────────
 // La columna JSONB puede contener tres formas históricas:
@@ -137,4 +138,71 @@ export function postulacionAunNoAbre(fechaInicio: string | null | undefined): bo
   const hoy = new Date()
   hoy.setHours(0, 0, 0, 0)
   return new Date(fechaInicio + 'T00:00:00').getTime() > hoy.getTime()
+}
+
+// ─── Chip de tramo de postulación (tarjetas) ────────────────────────────
+// Un solo chip con el tramo completo de la ventana (en PSEP dura 1–2 días)
+// en vez de dos relojes distintos (badge de apertura + contador al cierre).
+
+const MES_CORTO = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'set', 'oct', 'nov', 'dic']
+const MS_DIA = 86_400_000
+
+export type VentanaEstado = 'por_abrir' | 'abierta' | 'cerrada'
+
+export interface VentanaPostulacion {
+  estado: VentanaEstado
+  tramo: string    // "Postulación: 20 – 21 jul" / "…: solo el 20 jul" / "… hasta el 21 jul"
+  detalle: string  // "abre en N días" / "cierra en N días" / "¡cierra hoy!" / "cerrada"
+  cls: string      // clases tailwind del chip
+}
+
+function diaMes(ms: number): string {
+  const d = new Date(ms)
+  return `${d.getDate()} ${MES_CORTO[d.getMonth()]}`
+}
+
+// Fecha de hoy en Perú a medianoche, en ms — el servidor corre en UTC
+function hoyLimaMs(): number {
+  const iso = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' })
+  return parseFechaISO(iso) as number
+}
+
+export function ventanaPostulacion(
+  fechaInicio: string | null | undefined,
+  fechaLimite: string
+): VentanaPostulacion | null {
+  const fin = parseFechaISO(fechaLimite)
+  if (fin === null) return null
+  const ini = parseFechaISO(fechaInicio ?? null)
+  const hoy = hoyLimaMs()
+
+  let tramo: string
+  if (ini === null) {
+    tramo = `Postulación hasta el ${diaMes(fin)}`
+  } else if (ini === fin) {
+    tramo = `Postulación: solo el ${diaMes(ini)}`
+  } else {
+    const a = new Date(ini)
+    const b = new Date(fin)
+    const mismoMes = a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear()
+    tramo = `Postulación: ${mismoMes ? a.getDate() : diaMes(ini)} – ${diaMes(fin)}`
+  }
+
+  if (ini !== null && hoy < ini) {
+    const n = Math.round((ini - hoy) / MS_DIA)
+    return {
+      estado: 'por_abrir', tramo,
+      detalle: `abre en ${n} día${n === 1 ? '' : 's'}`,
+      cls: 'bg-amber-100 text-amber-700',
+    }
+  }
+  if (hoy <= fin) {
+    const n = Math.round((fin - hoy) / MS_DIA)
+    return {
+      estado: 'abierta', tramo,
+      detalle: n === 0 ? '¡cierra hoy!' : `cierra en ${n} día${n === 1 ? '' : 's'}`,
+      cls: 'bg-green-100 text-green-700',
+    }
+  }
+  return { estado: 'cerrada', tramo, detalle: 'cerrada', cls: 'bg-gray-100 text-gray-500' }
 }
