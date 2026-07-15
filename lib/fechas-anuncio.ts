@@ -70,3 +70,15 @@ export function msToISO(ms: number): string {
   const p = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
 }
+
+// El servidor corre en UTC, donde entre las 19:00 y las 24:00 de Lima ya es el
+// día siguiente. El cron `inactivar-convocatorias-vencidas` compara contra la
+// fecha de Lima, así que cualquier decisión sobre `estado` debe usar la misma.
+export function hoyLima(): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Lima',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date())
+}

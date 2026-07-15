@@ -35,11 +35,27 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     day: '2-digit', month: 'short', year: 'numeric',
   })
 
+  const description = `Convocatoria para ${c.titulo} en ${entidad}${c.unidad ? ` (${c.unidad})` : ''}. Sueldo S/ ${c.sueldo.toLocaleString()}. Postula antes del ${fechaLimite}. Tipo de contrato: ${c.tipo_contrato}.`
+  // Misma tarjeta que se publica en Instagram, en formato landscape 1200×630
+  const ogImage = `${BASE_URL}/api/og/convocatoria/${slug}?format=og`
+
   return {
     title: `${c.titulo} - ${entidad} | Convocape`,
-    description: `Convocatoria para ${c.titulo} en ${entidad}${c.unidad ? ` (${c.unidad})` : ''}. Sueldo S/ ${c.sueldo.toLocaleString()}. Postula antes del ${fechaLimite}. Tipo de contrato: ${c.tipo_contrato}.`,
+    description,
     alternates: {
       canonical: `${BASE_URL}/convocatorias/${slug}`,
+    },
+    openGraph: {
+      title: `${c.titulo} - ${entidad}`,
+      description,
+      url: `${BASE_URL}/convocatorias/${slug}`,
+      images: [{ url: ogImage, width: 1200, height: 630, alt: `${c.titulo} - ${entidad}` }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${c.titulo} - ${entidad}`,
+      description,
+      images: [ogImage],
     },
     ...(c.estado === 'inactiva' && {
       robots: { index: false, follow: true },

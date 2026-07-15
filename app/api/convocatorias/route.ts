@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
+import { after } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { z } from 'zod'
 import type { Cronograma, DocumentoOficial } from '@/types/convocatoria'
-import { normalizarTexto, rangoFechas, msToISO } from '@/lib/fechas-anuncio'
+import { normalizarTexto, rangoFechas, msToISO, hoyLima } from '@/lib/fechas-anuncio'
+import {
+  instagramConfigurado,
+  publicarNuevasEnInstagram,
+  type ConvocatoriaPost,
+} from '@/lib/instagram'
 
 // ─── Zod Schema ────────────────────────────────────────────────────────
 
@@ -271,9 +277,18 @@ function cronogramaFromLegacy(
   }
 }
 
+// `estado` no es un dato propio: es una función de `fecha_limite`, con la misma
+// regla que el cron `inactivar-convocatorias-vencidas`. Derivarlo (en vez de
+// fijar 'activa') hace el upsert idempotente: reenviar el mismo datos.json no
+// puede resucitar una convocatoria ya vencida.
+function estadoPorFecha(fechaLimite: string, hoyISO: string): string {
+  return fechaLimite < hoyISO ? 'inactiva' : 'activa'
+}
+
 async function transformToDb(
   item: z.infer<typeof convocatoriaScraperSchema>,
-  supabase: ReturnType<typeof createAdminClient>
+  supabase: ReturnType<typeof createAdminClient>,
+  hoyISO: string
 ): Promise<DbConvocatoria> {
   const entidadId = await resolveEntity(supabase, item.entidad)
   const [year, month] = item.fechaPub.split('-')
@@ -297,7 +312,7 @@ async function transformToDb(
     requerimientos: item.requerimientos,
     modalidad: item.modalidad,
     link_oficial: item.linkOficial,
-    estado: 'activa',
+    estado: estadoPorFecha(item.fechaLimite, hoyISO),
     nro_convocatoria: item.nroConvocatoria,
     numero_folio: item.numero_folio,
     indexable: item.indexable,
@@ -317,7 +332,8 @@ async function transformToDb(
 async function transformPsepToDb(
   item: z.infer<typeof convocatoriaPsepSchema>,
   raw: unknown,
-  supabase: ReturnType<typeof createAdminClient>
+  supabase: ReturnType<typeof createAdminClient>,
+  hoyISO: string
 ): Promise<DbConvocatoria> {
   const entidadId = await resolveEntity(supabase, item.cabecera.entidad)
   const derived = deriveBadges(item.cabecera.badges)
@@ -342,7 +358,7 @@ async function transformPsepToDb(
     requerimientos: item.requisitos,
     modalidad: item.modalidad ?? derived.modalidad,
     link_oficial: item.acciones?.postular ?? '',
-    estado: 'activa',
+    estado: estadoPorFecha(item.resumen.fechaLimite, hoyISO),
     nro_convocatoria: nroConvocatoria,
     // Folio compuesto solo si ambos existen — el índice único parcial ignora vacíos
     numero_folio: nroConvocatoria && codigoPlaza ? `pj-${nroConvocatoria}-${codigoPlaza}` : '',
@@ -440,16 +456,21 @@ export async function POST(request: NextRequest) {
 
   const results: DbConvocatoria[] = []
   const errors: { index: number; titulo: string; error: string }[] = []
+  // Nombre de la entidad por slug — para el caption de Instagram (los rows de
+  // `results` solo llevan entidad_id, no el nombre)
+  const entidadPorSlug = new Map<string, string>()
 
   // 4. Procesar cada item con el traductor de su formato
-  const hoyISO = msToISO(Date.now())
+  const hoyISO = hoyLima()
   for (let i = 0; i < items.length; i++) {
     const item = items[i]
     try {
       const dbItem = item.kind === 'psep'
-        ? await transformPsepToDb(item.data, item.raw, supabase)
-        : await transformToDb(item.data, supabase)
-      results.push(corregirFechaPub(dbItem, hoyISO))
+        ? await transformPsepToDb(item.data, item.raw, supabase, hoyISO)
+        : await transformToDb(item.data, supabase, hoyISO)
+      const row = corregirFechaPub(dbItem, hoyISO)
+      results.push(row)
+      entidadPorSlug.set(row.slug, item.kind === 'psep' ? item.data.cabecera.entidad : item.data.entidad)
     } catch (err) {
       errors.push({
         index: i,
@@ -490,6 +511,19 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // 5.5. Snapshot de qué slugs ya existían — para difundir en Instagram solo las
+  // convocatorias realmente nuevas (el upsert no distingue insert de update).
+  // Se consulta ANTES del upsert; después todos los slugs existirían.
+  const difundirIG = instagramConfigurado()
+  let yaExistia = new Set<string>()
+  if (difundirIG) {
+    const { data: preexistentes } = await supabase
+      .from('convocatorias')
+      .select('slug')
+      .in('slug', results.map(r => r.slug))
+    yaExistia = new Set((preexistentes ?? []).map(e => e.slug))
+  }
+
   // 6. Upsert masivo — deduplica por slug (constraint UNIQUE completa)
   // numero_folio usa índice parcial que PostgREST no admite en ON CONFLICT
   const { data, error: upsertError } = await supabase
@@ -511,6 +545,29 @@ export async function POST(request: NextRequest) {
   revalidatePath('/')
   revalidatePath('/sitemap.xml')
   revalidatePath('/entidades')
+
+  // 7. Difusión en Instagram — solo convocatorias nuevas y activas, en background
+  // (after) para no bloquear la respuesta al scraper. No lanza si algo falla.
+  if (difundirIG) {
+    const nuevas: ConvocatoriaPost[] = results
+      .filter(r => !yaExistia.has(r.slug) && r.estado === 'activa' && r.indexable)
+      .map(r => ({
+        slug: r.slug,
+        titulo: r.titulo,
+        entidad: entidadPorSlug.get(r.slug) ?? '',
+        sueldo: r.sueldo,
+        ubicacion: r.ubicacion,
+        tipoContrato: r.tipo_contrato,
+        fechaLimite: r.fecha_limite,
+        fechaInicioPostulacion: r.fecha_inicio_postulacion,
+        nivel: r.nivel,
+        modalidad: r.modalidad,
+        linkOficial: r.link_oficial,
+      }))
+    if (nuevas.length > 0) {
+      after(() => publicarNuevasEnInstagram(nuevas))
+    }
+  }
 
   return NextResponse.json(
     {
