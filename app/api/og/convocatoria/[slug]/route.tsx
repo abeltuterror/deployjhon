@@ -1,4 +1,5 @@
 import { ImageResponse } from 'next/og'
+import sharp from 'sharp'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { getConvocatoriaBySlug } from '@/app/actions'
@@ -336,14 +337,28 @@ export async function GET(
   const fmt: Formato = raw === 'story' || raw === 'og' ? raw : 'feed'
   const { w, h } = SIZES[fmt]
 
-  return new ImageResponse(
-    fmt === 'og' ? <Landscape c={c} /> : <Portrait c={c} fmt={fmt} />,
-    {
+  const CACHE = 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800'
+
+  // og:image (SEO / WhatsApp / Twitter) se queda en PNG, como siempre.
+  if (fmt === 'og') {
+    return new ImageResponse(<Landscape c={c} />, {
       width: w,
       height: h,
-      headers: {
-        'Cache-Control': 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800',
-      },
-    }
-  )
+      headers: { 'Cache-Control': CACHE },
+    })
+  }
+
+  // next/og siempre emite PNG, pero la Graph API de Instagram solo acepta JPEG
+  // (con PNG rechaza el post con "Only photo or video can be accepted as media
+  // type"). Los formatos de Instagram (feed/story) se convierten a JPEG; el
+  // fondo de la tarjeta es sólido, así que se aplana sobre INK por si acaso.
+  const png = new ImageResponse(<Portrait c={c} fmt={fmt} />, { width: w, height: h })
+  const jpeg = await sharp(Buffer.from(await png.arrayBuffer()))
+    .flatten({ background: INK })
+    .jpeg({ quality: 88, mozjpeg: true })
+    .toBuffer()
+
+  return new Response(new Uint8Array(jpeg), {
+    headers: { 'Content-Type': 'image/jpeg', 'Cache-Control': CACHE },
+  })
 }
