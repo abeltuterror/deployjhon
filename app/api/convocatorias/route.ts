@@ -5,11 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { z } from 'zod'
 import type { Cronograma, DocumentoOficial } from '@/types/convocatoria'
 import { normalizarTexto, rangoFechas, msToISO, hoyLima } from '@/lib/fechas-anuncio'
-import {
-  instagramConfigurado,
-  publicarNuevasEnInstagram,
-  type ConvocatoriaPost,
-} from '@/lib/instagram'
+import { instagramConfigurado } from '@/lib/instagram'
 
 // ─── Zod Schema ────────────────────────────────────────────────────────
 
@@ -456,9 +452,9 @@ export async function POST(request: NextRequest) {
 
   const results: DbConvocatoria[] = []
   const errors: { index: number; titulo: string; error: string }[] = []
-  // Nombre de la entidad por slug — para el caption de Instagram (los rows de
-  // `results` solo llevan entidad_id, no el nombre)
-  const entidadPorSlug = new Map<string, string>()
+  // Slugs que vienen del extractor PSEP (Poder Judicial) — solo esos entran a la
+  // cola de aprobación de Instagram.
+  const slugsPsep = new Set<string>()
 
   // 4. Procesar cada item con el traductor de su formato
   const hoyISO = hoyLima()
@@ -470,7 +466,7 @@ export async function POST(request: NextRequest) {
         : await transformToDb(item.data, supabase, hoyISO)
       const row = corregirFechaPub(dbItem, hoyISO)
       results.push(row)
-      entidadPorSlug.set(row.slug, item.kind === 'psep' ? item.data.cabecera.entidad : item.data.entidad)
+      if (item.kind === 'psep') slugsPsep.add(row.slug)
     } catch (err) {
       errors.push({
         index: i,
@@ -546,26 +542,23 @@ export async function POST(request: NextRequest) {
   revalidatePath('/sitemap.xml')
   revalidatePath('/entidades')
 
-  // 7. Difusión en Instagram — solo convocatorias nuevas y activas, en background
-  // (after) para no bloquear la respuesta al scraper. No lanza si algo falla.
+  // 7. Cola de aprobación de Instagram — solo convocatorias del Poder Judicial
+  // (PSEP) nuevas y activas quedan 'pendiente'; un admin las aprueba desde el
+  // panel (nada se publica solo). En background para no bloquear al scraper.
   if (difundirIG) {
-    const nuevas: ConvocatoriaPost[] = results
-      .filter(r => !yaExistia.has(r.slug) && r.estado === 'activa' && r.indexable)
-      .map(r => ({
-        slug: r.slug,
-        titulo: r.titulo,
-        entidad: entidadPorSlug.get(r.slug) ?? '',
-        sueldo: r.sueldo,
-        ubicacion: r.ubicacion,
-        tipoContrato: r.tipo_contrato,
-        fechaLimite: r.fecha_limite,
-        fechaInicioPostulacion: r.fecha_inicio_postulacion,
-        nivel: r.nivel,
-        modalidad: r.modalidad,
-        linkOficial: r.link_oficial,
-      }))
-    if (nuevas.length > 0) {
-      after(() => publicarNuevasEnInstagram(nuevas))
+    const pendientes = results
+      .filter(r => slugsPsep.has(r.slug) && !yaExistia.has(r.slug) && r.estado === 'activa' && r.indexable)
+      .map(r => r.slug)
+    if (pendientes.length > 0) {
+      after(async () => {
+        const { error } = await supabase
+          .from('convocatorias')
+          .update({ ig_estado: 'pendiente' })
+          .in('slug', pendientes)
+          .is('ig_estado', null)
+        if (error) console.error('[instagram] no se pudo encolar pendientes:', error.message)
+        else console.log(`[instagram] ${pendientes.length} convocatoria(s) del Poder Judicial en cola de aprobación`)
+      })
     }
   }
 

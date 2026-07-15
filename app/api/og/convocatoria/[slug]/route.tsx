@@ -1,6 +1,9 @@
 import { ImageResponse } from 'next/og'
+import { readFileSync } from 'fs'
+import { join } from 'path'
 import { getConvocatoriaBySlug } from '@/app/actions'
 import { parseFechaISO, hoyLima } from '@/lib/fechas-anuncio'
+import { ventanaPostulacion } from '@/lib/convocatoria'
 import type { ConvocatoriaDetail } from '@/types/convocatoria'
 
 // Genera la tarjeta social de una convocatoria en 3 formatos (?format=):
@@ -18,6 +21,19 @@ const RED = '#D91023'          // peru-red
 const INK = '#0F172A'          // slate-900 (fondo hero)
 const INK2 = '#16213E'
 
+// Logo oficial (public/logo.svg) embebido como data URI. Es el logotipo blanco
+// diseñado para fondo oscuro. Si por algún motivo no se puede leer, se cae al
+// wordmark de texto (fallback). viewBox 932.44 × 252.36 → ratio ~3.695.
+const LOGO_RATIO = 932.44 / 252.36
+const LOGO_DATA_URI: string | null = (() => {
+  try {
+    const svg = readFileSync(join(process.cwd(), 'public', 'logo.svg'), 'utf-8')
+    return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`
+  } catch {
+    return null
+  }
+})()
+
 type Formato = 'feed' | 'story' | 'og'
 
 const SIZES: Record<Formato, { w: number; h: number }> = {
@@ -29,10 +45,10 @@ const SIZES: Record<Formato, { w: number; h: number }> = {
 // Escalas tipográficas por formato (px)
 const CFG: Record<Exclude<Formato, 'og'>, {
   pad: number; cardPad: number; radius: number; brand: number; tag: number
-  title: number; entidad: number; label: number; salary: number; chip: number; foot: number
+  title: number; entidad: number; label: number; salary: number; chip: number; foot: number; req: number
 }> = {
-  feed:  { pad: 64, cardPad: 60, radius: 36, brand: 40, tag: 24, title: 68, entidad: 34, label: 22, salary: 78, chip: 30, foot: 26 },
-  story: { pad: 90, cardPad: 76, radius: 44, brand: 52, tag: 30, title: 92, entidad: 46, label: 28, salary: 108, chip: 40, foot: 34 },
+  feed:  { pad: 64, cardPad: 60, radius: 36, brand: 40, tag: 24, title: 68, entidad: 34, label: 22, salary: 78, chip: 30, foot: 26, req: 26 },
+  story: { pad: 84, cardPad: 76, radius: 44, brand: 52, tag: 30, title: 88, entidad: 44, label: 28, salary: 104, chip: 40, foot: 34, req: 34 },
 }
 
 function cap(s: string): string {
@@ -97,6 +113,20 @@ const clamp3 = {
   overflow: 'hidden',
 } as unknown as React.CSSProperties
 
+// Logo de marca: usa public/logo.svg; si no carga, cae al wordmark de texto.
+function BrandLogo({ height }: { height: number }) {
+  if (LOGO_DATA_URI) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={LOGO_DATA_URI} height={height} width={Math.round(height * LOGO_RATIO)} alt="Convocape" />
+  }
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', fontSize: height, fontWeight: 800, letterSpacing: -1 }}>
+      <span style={{ color: '#FFFFFF' }}>Convoca</span>
+      <span style={{ color: RED }}>pe</span>
+    </div>
+  )
+}
+
 // ── Layout vertical (feed / story) ─────────────────────────────────────────
 function Portrait({ c, fmt }: { c: ConvocatoriaDetail; fmt: 'feed' | 'story' }) {
   const s = CFG[fmt]
@@ -104,6 +134,14 @@ function Portrait({ c, fmt }: { c: ConvocatoriaDetail; fmt: 'feed' | 'story' }) 
   const entidad = c.entidades?.nombre_oficial ?? 'Entidad del Estado'
   const chip = estadoChip(c)
   const titulo = c.titulo.length > 110 ? c.titulo.slice(0, 108) + '…' : c.titulo
+  const isStory = fmt === 'story'
+  const reqPreview = (c.req_preview ?? [])
+    .filter((r): r is string => typeof r === 'string' && r.trim().length > 0)
+    .slice(0, 3)
+    .map(r => (r.length > 64 ? r.slice(0, 62) + '…' : r))
+  // Fechas de postulación (sin el prefijo "Postulación:", que va como etiqueta)
+  const ventana = ventanaPostulacion(c.fecha_inicio_postulacion, c.fecha_limite)
+  const postulTexto = ventana ? ventana.tramo.replace(/^Postulación:?\s*/, '') : null
 
   const tags: { text: string; bg: string; fg: string }[] = [
     { text: c.tipo_contrato, bg: RED, fg: '#FFFFFF' },
@@ -127,16 +165,13 @@ function Portrait({ c, fmt }: { c: ConvocatoriaDetail; fmt: 'feed' | 'story' }) 
     >
       {/* Marca */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', fontSize: s.brand, fontWeight: 800, letterSpacing: -1 }}>
-          <span style={{ color: '#FFFFFF' }}>Convoca</span>
-          <span style={{ color: RED }}>pe</span>
-        </div>
+        <BrandLogo height={Math.round(s.brand * 1.25)} />
         <div style={{ display: 'flex', color: '#94A3B8', fontSize: Math.round(s.brand * 0.5), fontWeight: 600 }}>
           Empleo público · Perú
         </div>
       </div>
 
-      {/* Tarjeta */}
+      {/* Tarjeta — en story crece para llenar el alto y distribuye los grupos */}
       <div
         style={{
           display: 'flex',
@@ -145,52 +180,75 @@ function Portrait({ c, fmt }: { c: ConvocatoriaDetail; fmt: 'feed' | 'story' }) 
           borderRadius: s.radius,
           padding: s.cardPad,
           boxShadow: '0 30px 80px rgba(0,0,0,0.45)',
+          ...(isStory
+            ? { flexGrow: 1, justifyContent: 'space-between', marginTop: s.pad * 0.55, marginBottom: s.pad * 0.55 }
+            : {}),
         }}
       >
-        {/* Tags */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: Math.round(s.tag * 0.5), marginBottom: s.cardPad * 0.5 }}>
-          {tags.map((t, i) => (
-            <Pill key={i} text={t.text} bg={t.bg} fg={t.fg} size={s.tag} bold={i === 0} />
-          ))}
-        </div>
-
-        {/* Título */}
-        <div
-          style={{
-            ...clamp3,
-            fontSize: tituloSize(s.title, titulo.length),
-            fontWeight: 800,
-            color: INK,
-            lineHeight: 1.08,
-            letterSpacing: -1,
-          }}
-        >
-          {titulo}
-        </div>
-
-        {/* Entidad */}
-        <div style={{ display: 'flex', marginTop: Math.round(s.entidad * 0.7), fontSize: s.entidad, fontWeight: 700, color: RED }}>
-          {entidad}
-        </div>
-
-        {/* Divisor */}
-        <div style={{ display: 'flex', height: 2, backgroundColor: '#E5E7EB', marginTop: s.cardPad * 0.55, marginBottom: s.cardPad * 0.55 }} />
-
-        {/* Sueldo + ubicación */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: s.label, fontWeight: 700, color: '#94A3B8', letterSpacing: 1 }}>SUELDO MENSUAL</span>
-            <span style={{ fontSize: s.salary, fontWeight: 800, color: INK, lineHeight: 1, letterSpacing: -2 }}>{fmtSueldo(c.sueldo)}</span>
+        {/* Grupo superior: tags + título + entidad */}
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: Math.round(s.tag * 0.5), marginBottom: s.cardPad * 0.5 }}>
+            {tags.map((t, i) => (
+              <Pill key={i} text={t.text} bg={t.bg} fg={t.fg} size={s.tag} bold={i === 0} />
+            ))}
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', maxWidth: '46%' }}>
-            <span style={{ fontSize: s.label, fontWeight: 700, color: '#94A3B8', letterSpacing: 1 }}>UBICACIÓN</span>
-            <span style={{ fontSize: Math.round(s.label * 1.5), fontWeight: 700, color: '#334155', textAlign: 'right' }}>{c.ubicacion}</span>
+
+          <div
+            style={{
+              ...clamp3,
+              fontSize: tituloSize(s.title, titulo.length),
+              fontWeight: 800,
+              color: INK,
+              lineHeight: 1.08,
+              letterSpacing: -1,
+            }}
+          >
+            {titulo}
+          </div>
+
+          <div style={{ display: 'flex', marginTop: Math.round(s.entidad * 0.7), fontSize: s.entidad, fontWeight: 700, color: RED }}>
+            {entidad}
           </div>
         </div>
 
-        {/* Chip de urgencia */}
-        <div style={{ display: 'flex', marginTop: s.cardPad * 0.6 }}>
-          <Pill text={chip.text} bg={chip.color} fg="#FFFFFF" size={s.chip} bold />
+        {/* Requisitos — solo en story, para dar cuerpo al formato vertical */}
+        {isStory && reqPreview.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', marginTop: s.cardPad * 0.5 }}>
+            <span style={{ fontSize: s.label, fontWeight: 700, color: '#94A3B8', letterSpacing: 1, marginBottom: 6 }}>REQUISITOS</span>
+            {reqPreview.map((r, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'flex-start', marginTop: 18 }}>
+                <span style={{ display: 'flex', color: RED, fontSize: s.req, fontWeight: 800, marginRight: 16, lineHeight: 1.2 }}>•</span>
+                <span style={{ display: 'flex', flex: 1, fontSize: s.req, fontWeight: 500, color: '#334155', lineHeight: 1.25 }}>{r}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Grupo inferior: sueldo + ubicación + urgencia */}
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', height: 2, backgroundColor: '#E5E7EB', marginTop: s.cardPad * 0.55, marginBottom: s.cardPad * 0.55 }} />
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{ fontSize: s.label, fontWeight: 700, color: '#94A3B8', letterSpacing: 1 }}>SUELDO MENSUAL</span>
+              <span style={{ fontSize: s.salary, fontWeight: 800, color: INK, lineHeight: 1, letterSpacing: -2 }}>{fmtSueldo(c.sueldo)}</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', maxWidth: '46%' }}>
+              <span style={{ fontSize: s.label, fontWeight: 700, color: '#94A3B8', letterSpacing: 1 }}>UBICACIÓN</span>
+              <span style={{ fontSize: Math.round(s.label * 1.5), fontWeight: 700, color: '#334155', textAlign: 'right' }}>{c.ubicacion}</span>
+            </div>
+          </div>
+
+          {postulTexto && (
+            <div style={{ display: 'flex', flexDirection: 'column', marginTop: s.cardPad * 0.45 }}>
+              <span style={{ fontSize: s.label, fontWeight: 700, color: '#94A3B8', letterSpacing: 1 }}>POSTULACIÓN</span>
+              <span style={{ fontSize: Math.round(s.label * 1.55), fontWeight: 800, color: INK }}>{postulTexto}</span>
+            </div>
+          )}
+
+          <div style={{ display: 'flex', marginTop: s.cardPad * 0.55 }}>
+            <Pill text={chip.text} bg={chip.color} fg="#FFFFFF" size={s.chip} bold />
+          </div>
         </div>
       </div>
 
@@ -222,10 +280,7 @@ function Landscape({ c }: { c: ConvocatoriaDetail }) {
     >
       {/* Columna izquierda: texto */}
       <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', width: 700, paddingRight: 40 }}>
-        <div style={{ display: 'flex', alignItems: 'center', fontSize: 34, fontWeight: 800, letterSpacing: -1 }}>
-          <span style={{ color: '#FFFFFF' }}>Convoca</span>
-          <span style={{ color: RED }}>pe</span>
-        </div>
+        <BrandLogo height={42} />
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <div
             style={{

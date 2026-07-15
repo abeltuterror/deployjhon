@@ -327,6 +327,86 @@ export async function deleteConvocatoria(id: number): Promise<void> {
   revalidatePath('/')
 }
 
+// ── Admin: Instagram (cola de aprobación — solo Poder Judicial) ────────────────
+
+export interface IgPendiente {
+  id: number
+  slug: string
+  titulo: string
+  sueldo: number
+  ubicacion: string
+  fecha_limite: string
+  entidades: { nombre_oficial: string } | null
+}
+
+export async function getInstagramPendientes(): Promise<IgPendiente[]> {
+  const supabase = await createClient()
+  const admin = await requireAdmin(supabase)
+  if (!admin) return []
+
+  const { data } = await supabase
+    .from('convocatorias')
+    .select('id, slug, titulo, sueldo, ubicacion, fecha_limite, entidades(nombre_oficial)')
+    .eq('ig_estado', 'pendiente')
+    .eq('estado', 'activa')
+    .order('fecha_pub', { ascending: false })
+    .limit(50)
+
+  return (data ?? []) as unknown as IgPendiente[]
+}
+
+// Aprobar = publicar en Instagram y marcar 'publicada'. Publica de forma síncrona
+// (el admin espera unos segundos): crea el contenedor con la tarjeta y lo publica.
+export async function aprobarInstagram(slug: string): Promise<{ error?: string; id?: string }> {
+  const supabase = await createClient()
+  const admin = await requireAdmin(supabase)
+  if (!admin) return { error: 'Acceso denegado.' }
+
+  const c = await getConvocatoriaBySlug(slug)
+  if (!c) return { error: 'Convocatoria no encontrada.' }
+
+  const tieneDocumentos = (c.documentos_oficiales ?? []).some(d => d.disponible && !!d.url)
+
+  const { publicarConvocatoria } = await import('@/lib/instagram')
+  const r = await publicarConvocatoria({
+    slug: c.slug,
+    titulo: c.titulo,
+    entidad: c.entidades?.nombre_oficial ?? '',
+    sueldo: c.sueldo,
+    ubicacion: c.ubicacion,
+    tipoContrato: c.tipo_contrato,
+    fechaLimite: c.fecha_limite,
+    fechaInicioPostulacion: c.fecha_inicio_postulacion,
+    nivel: c.nivel,
+    modalidad: c.modalidad,
+    linkOficial: c.link_oficial ?? '',
+    tieneDocumentos,
+  })
+  if (!r.ok) return { error: r.error ?? 'No se pudo publicar.' }
+
+  // Marcar publicada con el cliente admin (no depende de RLS de UPDATE)
+  const { createAdminClient } = await import('@/lib/supabase/admin')
+  const db = createAdminClient()
+  await db
+    .from('convocatorias')
+    .update({ ig_estado: 'publicada', ig_media_id: r.id ?? null, ig_publicada_at: new Date().toISOString() })
+    .eq('slug', slug)
+
+  revalidatePath('/')
+  return { id: r.id }
+}
+
+export async function descartarInstagram(slug: string): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const admin = await requireAdmin(supabase)
+  if (!admin) return { error: 'Acceso denegado.' }
+
+  const { createAdminClient } = await import('@/lib/supabase/admin')
+  const db = createAdminClient()
+  await db.from('convocatorias').update({ ig_estado: 'omitida' }).eq('slug', slug)
+  return {}
+}
+
 // ── Auth helpers ─────────────────────────────────────────────────────────────
 
 export async function checkEmailExists(email: string): Promise<boolean> {

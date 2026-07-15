@@ -18,6 +18,7 @@
 
 import { BASE_URL } from '@/lib/seo'
 import { parseFechaISO, hoyLima } from '@/lib/fechas-anuncio'
+import { ventanaPostulacion } from '@/lib/convocatoria'
 
 export interface ConvocatoriaPost {
   slug: string
@@ -31,6 +32,7 @@ export interface ConvocatoriaPost {
   nivel: string[]
   modalidad: string
   linkOficial: string
+  tieneDocumentos: boolean   // hay PDFs oficiales (bases, cronograma) en la web
 }
 
 // Flujo elegido: Instagram API con inicio de sesión (Instagram Login) → host
@@ -62,7 +64,7 @@ function textoUrgencia(c: ConvocatoriaPost): string | null {
   if (dias < 0) return null
   if (iniMs !== null && hoyMs < iniMs) {
     const d = Math.round((iniMs - hoyMs) / MS_DIA)
-    return `Postulación abre en ${d} día${d === 1 ? '' : 's'}`
+    return `Abre en ${d} día${d === 1 ? '' : 's'}`
   }
   if (dias === 0) return '¡Cierra hoy!'
   return `Cierra en ${dias} día${dias === 1 ? '' : 's'}`
@@ -76,13 +78,24 @@ function toTag(s: string): string {
   return clean ? '#' + clean : ''
 }
 
+// Niveles sin valor como hashtag (el scraper a veces manda "No especificado")
+const NIVELES_JUNK = new Set(['noespecificado', 'noaplica', 'ninguno', 'otros'])
+
+function nivelUtil(n: string): boolean {
+  const norm = n.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z]/gi, '').toLowerCase()
+  return norm.length > 0 && !NIVELES_JUNK.has(norm)
+}
+
 export function construirHashtags(c: ConvocatoriaPost): string {
   const region = c.ubicacion.includes(' - ') ? c.ubicacion.split(' - ')[0] : c.ubicacion
+  const entidadNorm = c.entidad.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+  const esPoderJudicial = /poder judicial|corte superior|judicial/.test(entidadNorm)
   const tags = [
     '#EmpleoPublico', '#TrabajoPeru', '#ConvocatoriasPeru', '#Convocape',
+    esPoderJudicial ? '#PoderJudicial' : '',
     toTag('Convocatoria ' + c.tipoContrato),
     toTag('Trabajo ' + region),
-    ...c.nivel.map(toTag),
+    ...c.nivel.filter(nivelUtil).map(toTag),
   ].filter(Boolean)
   return Array.from(new Set(tags)).join(' ')
 }
@@ -93,16 +106,20 @@ export function imagenUrl(slug: string): string {
 
 export function construirCaption(c: ConvocatoriaPost): string {
   const urgencia = textoUrgencia(c)
+  // Ventana de postulación con fechas concretas (no se pone vieja como el contador)
+  const ventana = ventanaPostulacion(c.fechaInicioPostulacion, c.fechaLimite)
   const enlace = `${BASE_URL}/convocatorias/${c.slug}`.replace(/^https?:\/\//, '')
   const lineas = [
     `📢 Nueva convocatoria: ${c.titulo}`,
     `🏛️ ${c.entidad}`,
     `💰 Sueldo: ${fmtSueldo(c.sueldo)}`,
     `📍 ${c.ubicacion}`,
+    ventana ? `🗓️ ${ventana.tramo}` : null,
     urgencia ? `⏰ ${urgencia}` : null,
+    c.tieneDocumentos ? '📄 Tenemos las bases y todos los documentos oficiales en convocape.com' : null,
     '',
     `👉 Postula en ${enlace}`,
-    '(link en la bio)',
+    '(link en la bio 👆)',
     '',
     construirHashtags(c),
   ]

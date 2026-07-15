@@ -6,6 +6,10 @@ import {
   getAdminStats,
   submitConvocatoria,
   deleteConvocatoria,
+  getInstagramPendientes,
+  aprobarInstagram,
+  descartarInstagram,
+  type IgPendiente,
 } from '@/app/actions'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -31,7 +35,7 @@ interface AdminStats {
   top_ubicaciones: { ubicacion: string; count: number }[]
 }
 
-type Tab = 'lista' | 'nueva' | 'stats'
+type Tab = 'lista' | 'nueva' | 'stats' | 'instagram'
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
@@ -82,8 +86,10 @@ function AdminContent({ onClose }: { onClose: () => void }) {
   const [tab, setTab] = useState<Tab>('lista')
   const [convocatorias, setConvocatorias] = useState<AdminConvocatoria[] | null>(null)
   const [stats, setStats]                 = useState<AdminStats | null>(null)
+  const [pendientes, setPendientes]       = useState<IgPendiente[] | null>(null)
   const [loadingList, setLoadingList]     = useState(false)
   const [loadingStats, setLoadingStats]   = useState(false)
+  const [loadingPend, setLoadingPend]     = useState(false)
 
   const loadList = useCallback(async () => {
     setLoadingList(true)
@@ -99,10 +105,18 @@ function AdminContent({ onClose }: { onClose: () => void }) {
     setLoadingStats(false)
   }, [])
 
+  const loadPendientes = useCallback(async () => {
+    setLoadingPend(true)
+    const data = await getInstagramPendientes()
+    setPendientes(data)
+    setLoadingPend(false)
+  }, [])
+
   useEffect(() => {
     if (tab === 'lista' && convocatorias === null) loadList()
     if (tab === 'stats' && stats === null) loadStats()
-  }, [tab, convocatorias, stats, loadList, loadStats])
+    if (tab === 'instagram' && pendientes === null) loadPendientes()
+  }, [tab, convocatorias, stats, pendientes, loadList, loadStats, loadPendientes])
 
   const handleDelete = async (id: number) => {
     if (!confirm('¿Eliminar esta convocatoria?')) return
@@ -111,9 +125,10 @@ function AdminContent({ onClose }: { onClose: () => void }) {
   }
 
   const TABS: { key: Tab; label: string; icon: string }[] = [
-    { key: 'lista',  label: 'Lista',       icon: 'fa-list' },
-    { key: 'nueva',  label: 'Nueva',        icon: 'fa-plus-circle' },
-    { key: 'stats',  label: 'Estadísticas', icon: 'fa-chart-bar' },
+    { key: 'lista',     label: 'Lista',        icon: 'fa-list' },
+    { key: 'nueva',     label: 'Nueva',        icon: 'fa-plus-circle' },
+    { key: 'instagram', label: 'Instagram',    icon: 'fa-bullhorn' },
+    { key: 'stats',     label: 'Estadísticas', icon: 'fa-chart-bar' },
   ]
 
   return (
@@ -167,6 +182,14 @@ function AdminContent({ onClose }: { onClose: () => void }) {
         )}
         {tab === 'nueva' && (
           <NuevaTab onSuccess={() => { setConvocatorias(null); setTab('lista') }} />
+        )}
+        {tab === 'instagram' && (
+          <InstagramTab
+            items={pendientes ?? []}
+            loading={loadingPend}
+            onRefresh={loadPendientes}
+            onChanged={(slug) => setPendientes(prev => prev?.filter(p => p.slug !== slug) ?? [])}
+          />
         )}
         {tab === 'stats' && (
           <StatsTab stats={stats} loading={loadingStats} />
@@ -250,6 +273,106 @@ function ListaTab({
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Tab: Instagram (cola de aprobación — solo Poder Judicial) ──────────────────
+
+function InstagramTab({
+  items, loading, onRefresh, onChanged,
+}: {
+  items: IgPendiente[]
+  loading: boolean
+  onRefresh: () => void
+  onChanged: (slug: string) => void
+}) {
+  const [busy, setBusy]   = useState<string | null>(null)
+  const [error, setError] = useState('')
+
+  const handlePublicar = async (slug: string) => {
+    setError('')
+    setBusy(slug)
+    const r = await aprobarInstagram(slug)
+    setBusy(null)
+    if (r.error) setError(`No se pudo publicar: ${r.error}`)
+    else onChanged(slug)
+  }
+
+  const handleDescartar = async (slug: string) => {
+    if (!confirm('¿Descartar esta convocatoria? No se publicará en Instagram.')) return
+    setBusy(slug)
+    await descartarInstagram(slug)
+    setBusy(null)
+    onChanged(slug)
+  }
+
+  if (loading) return <TableSkeleton />
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <p className="text-sm font-semibold text-gray-900">Pendientes de publicar en Instagram</p>
+          <p className="text-xs text-gray-500">Solo Poder Judicial · {items.length} en cola</p>
+        </div>
+        <button
+          onClick={onRefresh}
+          className="text-xs text-gray-500 hover:text-peru-red flex items-center gap-1 transition-colors"
+        >
+          <i className="fas fa-sync-alt" /> Actualizar
+        </button>
+      </div>
+
+      {error && (
+        <div className="bg-red-50 text-red-700 text-sm rounded-xl px-4 py-3 mb-4">
+          <i className="fas fa-exclamation-circle mr-2" />{error}
+        </div>
+      )}
+
+      {items.length === 0 ? (
+        <div className="text-center py-16 text-gray-400">
+          <i className="fas fa-check-circle text-3xl mb-3 block text-green-400" />
+          <p className="text-sm">No hay convocatorias pendientes.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {items.map(c => (
+            <div key={c.id} className="border border-gray-200 rounded-2xl overflow-hidden flex flex-col">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`/api/og/convocatoria/${c.slug}?format=feed`}
+                alt={c.titulo}
+                className="w-full aspect-square object-cover bg-gray-100"
+                loading="lazy"
+              />
+              <div className="p-3 flex flex-col gap-1 flex-1">
+                <p className="font-semibold text-sm text-gray-900 line-clamp-2">{c.titulo}</p>
+                <p className="text-xs text-gray-500 truncate">{c.entidades?.nombre_oficial ?? '—'}</p>
+                <p className="text-xs text-gray-400">S/ {c.sueldo?.toLocaleString()} · cierra {c.fecha_limite}</p>
+                <div className="flex gap-2 mt-2">
+                  <button
+                    onClick={() => handlePublicar(c.slug)}
+                    disabled={busy === c.slug}
+                    className="flex-1 py-2 bg-peru-red hover:bg-peru-dark text-white text-xs font-semibold rounded-lg disabled:opacity-60 flex items-center justify-center gap-1.5 transition-colors"
+                  >
+                    {busy === c.slug
+                      ? <><i className="fas fa-spinner fa-spin" /> Publicando…</>
+                      : <><i className="fas fa-paper-plane" /> Publicar</>}
+                  </button>
+                  <button
+                    onClick={() => handleDescartar(c.slug)}
+                    disabled={busy === c.slug}
+                    className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-semibold rounded-lg disabled:opacity-60 transition-colors"
+                  >
+                    Descartar
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
