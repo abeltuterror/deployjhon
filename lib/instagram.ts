@@ -111,7 +111,10 @@ export function construirCaption(c: ConvocatoriaPost): string {
   const urgencia = textoUrgencia(c)
   // Ventana de postulación con fechas concretas (no se pone vieja como el contador)
   const ventana = ventanaPostulacion(c.fechaInicioPostulacion, c.fechaLimite)
-  const enlace = `${BASE_URL}/convocatorias/${c.slug}`.replace(/^https?:\/\//, '')
+  // En IG el link no es clicable, así que se muestra el dominio limpio (legible y
+  // fácil de teclear) en vez del slug largo, que enterraba la URL. El deep-link va
+  // en la bio.
+  const enlace = BASE_URL.replace(/^https?:\/\//, '')
   const lineas = [
     `📢 Nueva convocatoria: ${c.titulo}`,
     `🏛️ ${c.entidad}`,
