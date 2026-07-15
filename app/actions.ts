@@ -367,6 +367,15 @@ export async function aprobarInstagram(slug: string): Promise<{ error?: string; 
 
   const tieneDocumentos = (c.documentos_oficiales ?? []).some(d => d.disponible && !!d.url)
 
+  // Origin del deploy que está publicando (dev o prod): Instagram descargará la
+  // tarjeta desde este mismo host, así el deploy de dev publica su propio JPEG y
+  // no el de producción.
+  const { headers } = await import('next/headers')
+  const h = await headers()
+  const host = h.get('x-forwarded-host') ?? h.get('host')
+  const proto = h.get('x-forwarded-proto') ?? 'https'
+  const imageBaseUrl = host ? `${proto}://${host}` : undefined
+
   const { publicarConvocatoria } = await import('@/lib/instagram')
   const r = await publicarConvocatoria({
     slug: c.slug,
@@ -381,7 +390,7 @@ export async function aprobarInstagram(slug: string): Promise<{ error?: string; 
     modalidad: c.modalidad,
     linkOficial: c.link_oficial ?? '',
     tieneDocumentos,
-  })
+  }, imageBaseUrl)
   if (!r.ok) return { error: r.error ?? 'No se pudo publicar.' }
 
   // Marcar publicada con el cliente admin (no depende de RLS de UPDATE)

@@ -100,8 +100,11 @@ export function construirHashtags(c: ConvocatoriaPost): string {
   return Array.from(new Set(tags)).join(' ')
 }
 
-export function imagenUrl(slug: string): string {
-  return `${BASE_URL}/api/og/convocatoria/${slug}?format=feed`
+// La imagen se pide al deploy que está publicando (baseUrl), no siempre a
+// producción: así el deploy de `dev` publica SU propia tarjeta (con el JPEG
+// corregido) en vez de la de producción. Si no se pasa baseUrl, cae a BASE_URL.
+export function imagenUrl(slug: string, baseUrl: string = BASE_URL): string {
+  return `${baseUrl}/api/og/convocatoria/${slug}?format=feed`
 }
 
 export function construirCaption(c: ConvocatoriaPost): string {
@@ -157,10 +160,13 @@ async function esperarContenedor(id: string): Promise<void> {
 }
 
 export async function publicarConvocatoria(
-  c: ConvocatoriaPost
+  c: ConvocatoriaPost,
+  imageBaseUrl?: string
 ): Promise<{ ok: boolean; id?: string; error?: string }> {
   const igId = process.env.IG_BUSINESS_ACCOUNT_ID!
-  const image_url = imagenUrl(c.slug)
+  // La imagen se pide al deploy que publica (imageBaseUrl); el link del caption
+  // sí apunta a producción (BASE_URL) para que la gente aterrice en el sitio real.
+  const image_url = imagenUrl(c.slug, imageBaseUrl)
   const caption = construirCaption(c)
 
   if (process.env.IG_DRY_RUN === '1') {
